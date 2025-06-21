@@ -174,7 +174,7 @@ def run_frontend():
     print(f"{Colors.BLUE}[前端] 啟動 Next.js 應用...{Colors.ENDC}")
     
     env = os.environ.copy()
-    env["NEXT_PUBLIC_API_URL"] = os.environ.get("NEXT_PUBLIC_API_URL", "http://localhost:8000")
+    env["NEXT_PUBLIC_API_URL"] = "http://localhost:8000"
     
     frontend_process = subprocess.Popen(
         ["npm", "run", "dev"],

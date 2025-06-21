@@ -91,7 +91,6 @@ npm run dev
 - `DEEPSEEK_API_KEY`: DeepSeek API 密鑰
 - `MODEL_NAME`: LLM 模型名稱
 - `EMBEDDING_MODEL`: 嵌入模型名稱
-- `NEXT_PUBLIC_API_URL`: 前端連接的 API 位址，預設為 `http://localhost:8000`
 
 ## 文檔上傳
 
