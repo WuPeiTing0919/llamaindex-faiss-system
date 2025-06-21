@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { ViewportProvider } from '@/components/ui/viewport-provider'
 import { ThemeProvider } from '@/components/theme-provider'
+import { AuthProvider } from "@/components/auth/auth-context"
 
 export const metadata: Metadata = {
   title: '企業知識庫系統',
@@ -25,9 +26,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <ViewportProvider>
-            {children}
-          </ViewportProvider>
+          <AuthProvider>
+            <ViewportProvider>
+              {children}
+            </ViewportProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

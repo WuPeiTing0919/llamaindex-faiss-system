@@ -22,6 +22,13 @@ numpy>=1.24.4
 fastapi>=0.104.1
 uvicorn>=0.24.0
 
+# 用戶認證相關
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+sqlalchemy>=2.0.0
+sqlite3
+
 # 工具庫
 requests>=2.31.0
 python-dotenv>=1.0.0
