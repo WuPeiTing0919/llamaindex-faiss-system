@@ -22,11 +22,14 @@
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
 
 # 前端 URL (部署後更新)
-NEXT_PUBLIC_API_URL=https://your-app-name.zeabur.app
+NEXT_PUBLIC_API_URL=https://your-app-name.zeabur.app/api
+FRONTEND_URL=https://your-app-name.zeabur.app
 
 # 可選：允許所有來源 (開發用)
-ALLOW_ALL_ORIGINS=false
+ALLOW_ALL_ORIGINS=true
 ```
+
+**重要**: `NEXT_PUBLIC_API_URL` 應該指向 API 服務的 URL，通常是 `https://your-app-name.zeabur.app/api`
 
 ### 2. 部署到 Zeabur
 
@@ -89,6 +92,40 @@ MemoryError: Unable to allocate array
 - 升級 Zeabur 計劃以獲得更多 RAM
 - 使用較小的嵌入模型
 
+#### 5. API 連接問題 (404 錯誤)
+```
+POST https://your-app-name.zeabur.app/auth/register 404 (Not Found)
+```
+
+**解決方案：**
+1. **檢查環境變數**：
+   ```bash
+   NEXT_PUBLIC_API_URL=https://your-app-name.zeabur.app/api
+   FRONTEND_URL=https://your-app-name.zeabur.app
+   ```
+
+2. **檢查服務狀態**：
+   - 在 Zeabur 控制台中檢查 API 服務是否正常運行
+   - 查看服務日誌是否有錯誤
+
+3. **測試 API 端點**：
+   ```bash
+   curl https://your-app-name.zeabur.app/api/health
+   ```
+
+4. **重新部署**：
+   - 推送新的代碼到 GitHub
+   - 在 Zeabur 中重新部署
+
+#### 6. CORS 錯誤
+```
+Access to fetch at '...' from origin '...' has been blocked by CORS policy
+```
+
+**解決方案：**
+- 確保 `ALLOW_ALL_ORIGINS=true` 環境變數已設置
+- 檢查 `zeabur.toml` 中的 CORS 配置
+
 ### 日誌檢查
 
 在 Zeabur 控制台中檢查服務日誌：
@@ -96,6 +133,23 @@ MemoryError: Unable to allocate array
 1. 進入服務詳情頁面
 2. 點擊 "Logs" 標籤
 3. 查看錯誤信息
+
+### 服務連接測試
+
+部署完成後，請測試以下端點：
+
+```bash
+# 健康檢查
+curl https://your-app-name.zeabur.app/api/health
+
+# API 根路徑
+curl https://your-app-name.zeabur.app/api/
+
+# 註冊端點 (POST)
+curl -X POST https://your-app-name.zeabur.app/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","email":"test@example.com","password":"password"}'
+```
 
 ### 性能優化
 
@@ -122,8 +176,8 @@ MemoryError: Unable to allocate array
 ### 健康檢查
 
 系統提供健康檢查端點：
-- `GET /health` - 基本健康狀態
-- `GET /status` - 用戶系統狀態
+- `GET /api/health` - 基本健康狀態
+- `GET /api/status` - 用戶系統狀態
 
 ### 數據備份
 
