@@ -16,8 +16,8 @@ if [ ! -d "node_modules" ]; then
     npm install --legacy-peer-deps
 fi
 
-# 設定環境變數
-export NEXT_PUBLIC_API_URL=http://localhost:8000
+# 設定環境變數，可由外部覆蓋
+export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-http://localhost:8000}"
 
 # 啟動前端
 echo -e "${GREEN}[前端] 啟動前端服務...${NC}"
