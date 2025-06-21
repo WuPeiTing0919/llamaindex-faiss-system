@@ -17,6 +17,7 @@
       DEEPSEEK_API_KEY = "$DEEPSEEK_API_KEY"
       EMBEDDING_MODEL = "BAAI/bge-base-zh"
       MODEL_NAME = "deepseek-chat"
+      FRONTEND_URL = "https://llamaindex-faiss-system.vercel.app"
 
 [persistentVolumes]
   [persistentVolumes.storage]

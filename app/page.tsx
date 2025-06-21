@@ -17,7 +17,8 @@ import { ResponsiveContainer } from "@/components/ui/responsive-container"
 const getApiBaseUrl = () => {
   // 首先檢查環境變量
   if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
+    // 確保URL末尾沒有斜線
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
   }
   
   // 然後嘗試使用當前主機的端口 8000

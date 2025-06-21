@@ -4,6 +4,7 @@ FastAPI 服務器 - 提供 REST API 接口
 
 import time
 import base64
+import os
 from pathlib import Path
 from typing import List, Optional
 
@@ -18,13 +19,31 @@ load_dotenv()
 
 app = FastAPI(title="企業知識庫 API", version="1.0.0")
 
-# 添加 CORS 中間件，允許所有來源
+# 設置允許的來源
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://llamaindex-faiss-system.vercel.app",
+    "https://llamaindex-faiss-system-*.vercel.app",  # Vercel 預覽部署
+    "https://llamaindex-faiss-system.zeabur.app",
+]
+
+# 如果有環境變數指定的前端URL，也加入允許列表
+if os.getenv("FRONTEND_URL"):
+    allowed_origins.append(os.getenv("FRONTEND_URL"))
+
+# 在開發環境或如果設置了允許所有來源的環境變數，則允許所有來源
+if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
+    allowed_origins = ["*"]
+
+# 添加 CORS 中間件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
