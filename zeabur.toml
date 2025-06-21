@@ -10,8 +10,9 @@
 
   [services.api]
     type = "python"
-    buildCommand = "pip install -r scripts/requirements.txt"
-    startCommand = "python scripts/api_server.py"
+    pythonVersion = "3.11"
+    buildCommand = "pip install -r scripts/requirements-zeabur.txt"
+    startCommand = "python scripts/auth_api_server.py"
     port = 8000
     [services.api.env]
       DEEPSEEK_API_KEY = "$DEEPSEEK_API_KEY"
@@ -21,11 +22,11 @@
 
 [persistentVolumes]
   [persistentVolumes.storage]
-    mountPath = "/app/documents"
+    mountPath = "/app/user_documents"
     size = "1Gi"
 
-  [persistentVolumes.faiss]
-    mountPath = "/app/faiss_index"
+  [persistentVolumes.indexes]
+    mountPath = "/app/user_indexes"
     size = "1Gi"
 
   [persistentVolumes.logs]

@@ -159,6 +159,8 @@ npm run dev
 
 ## 部署
 
+### 本地部署
+
 系統可以通過 Docker 部署:
 
 ```bash
@@ -168,6 +170,60 @@ docker-compose build
 # 啟動服務
 docker-compose up -d
 ```
+
+### 雲端部署
+
+#### Zeabur 部署（推薦）
+
+**快速部署到 Zeabur 平台：**
+
+1. **準備環境變數**
+   ```bash
+   DEEPSEEK_API_KEY=your_deepseek_api_key_here
+   NEXT_PUBLIC_API_URL=https://your-app-name.zeabur.app
+   ```
+
+2. **部署步驟**
+   - 將代碼推送到 GitHub 倉庫
+   - 在 Zeabur 中連接 GitHub 倉庫
+   - 選擇 "Deploy from Git"
+   - 等待部署完成
+
+3. **驗證部署**
+   - 訪問前端 URL: `https://your-app-name.zeabur.app`
+   - 註冊新用戶並測試功能
+
+**詳細指南：** [Zeabur 部署指南](docs/ZEABUR_DEPLOYMENT.md)
+
+#### Vercel 部署
+
+**部署前端到 Vercel：**
+
+1. 連接 GitHub 倉庫到 Vercel
+2. 設置環境變數
+3. 部署前端應用
+
+**詳細指南：** [Vercel 部署指南](docs/VERCEL_DEPLOYMENT.md)
+
+### 部署故障排除
+
+#### 常見問題
+
+1. **Python 版本錯誤**
+   - 確保使用 Python 3.11+
+   - 使用 `requirements-zeabur.txt` 進行 Zeabur 部署
+
+2. **依賴安裝失敗**
+   - 檢查網絡連接
+   - 使用固定版本號而非範圍版本
+
+3. **內存不足**
+   - 升級雲端計劃
+   - 使用較小的嵌入模型
+
+4. **API 密鑰錯誤**
+   - 確保環境變數正確設置
+   - 檢查 API 密鑰有效性
 
 更多部署選項，請參考 `docs/` 目錄下的文檔:
 

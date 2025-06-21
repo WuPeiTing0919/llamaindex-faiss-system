@@ -1,98 +1,172 @@
 # Zeabur 部署指南
 
-本文檔提供了將企業知識庫系統部署到 Zeabur 平台的詳細指南。
+## 概述
 
-## 部署前準備
+本指南將幫助您在 Zeabur 平台上部署支持用戶認證的 LlamaIndex + FAISS 知識庫系統。
 
-### 1. Zeabur 帳號
+## 系統要求
 
-確保您已經在 [Zeabur](https://zeabur.com) 註冊並創建了帳號。
-
-### 2. 項目結構確認
-
-確保您的項目結構如下：
-
-```
-- app/                   # Next.js 前端應用
-- components/            # 前端組件
-- scripts/               # API 伺服器和設置腳本
-  - api_server.py        # FastAPI 服務
-  - setup_knowledge_base.py  # 知識庫系統核心
-  - requirements.txt     # Python 依賴
-- documents/             # 知識庫文檔存放處
-- faiss_index/           # FAISS 向量索引存放處
-- zeabur.toml            # Zeabur 配置文件
-```
-
-### 3. 環境變數
-
-確保在 Zeabur 的專案設定中添加以下環境變數：
-
-- `DEEPSEEK_API_KEY`: DeepSeek API 密鑰
-- `EMBEDDING_MODEL`: 默認為 `BAAI/bge-base-zh`
-- `MODEL_NAME`: 默認為 `deepseek-chat`
+- Python 3.11+
+- Node.js 18+
+- 至少 1GB RAM
+- 至少 2GB 存儲空間
 
 ## 部署步驟
 
-### 1. 推送代碼到 Git 倉庫
+### 1. 準備環境變數
 
-確保您的專案代碼已推送到 GitHub、GitLab 或其他 Git 平台。
+在 Zeabur 控制台中設置以下環境變數：
 
-### 2. 在 Zeabur 中創建新專案
+```bash
+# DeepSeek API 配置
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
 
-1. 登入 Zeabur 控制台
-2. 點擊「建立專案」按鈕
-3. 輸入專案名稱（例如：`enterprise-knowledge-base`）
+# 前端 URL (部署後更新)
+NEXT_PUBLIC_API_URL=https://your-app-name.zeabur.app
 
-### 3. 添加服務
+# 可選：允許所有來源 (開發用)
+ALLOW_ALL_ORIGINS=false
+```
 
-Zeabur 會自動檢測到 `zeabur.toml` 文件並配置服務。
+### 2. 部署到 Zeabur
 
-### 4. 配置環境變數
+1. 將代碼推送到 GitHub 倉庫
+2. 在 Zeabur 中連接 GitHub 倉庫
+3. 選擇 "Deploy from Git"
+4. 等待部署完成
 
-在 Zeabur 控制台中：
+### 3. 配置服務
 
-1. 進入您的專案
-2. 點擊「環境變數」頁籤
-3. 添加所需的環境變數（參考上方第 3 點）
+系統會自動部署兩個服務：
 
-### 5. 配置網域
+- **Web 服務** (Next.js 前端) - 端口 3000
+- **API 服務** (FastAPI 後端) - 端口 8000
 
-1. 在服務頁面中，點擊「網域」頁籤
-2. 設置您的自定義網域或使用 Zeabur 提供的默認子網域
+### 4. 驗證部署
 
-### 6. 設置持久化儲存
+1. 訪問前端 URL: `https://your-app-name.zeabur.app`
+2. 註冊新用戶
+3. 上傳測試文檔
+4. 測試查詢功能
 
-確保在 Zeabur 中為以下目錄配置了持久化儲存：
+## 故障排除
 
-- `/app/documents`: 用於存儲知識庫文檔
-- `/app/faiss_index`: 用於存儲向量索引
-- `/app/logs`: 用於存儲系統日誌
+### 常見問題
 
-這些配置已經在 `zeabur.toml` 文件中定義。
+#### 1. Python 版本錯誤
+```
+ERROR: Ignored the following versions that require a different python version
+```
 
-## 部署後檢查
+**解決方案：**
+- 確保 `zeabur.toml` 中設置了 `pythonVersion = "3.11"`
+- 使用 `requirements-zeabur.txt` 而不是 `requirements.txt`
 
-部署完成後，您可以訪問以下端點檢查系統運行狀態：
+#### 2. sqlite3 模組錯誤
+```
+ERROR: No matching distribution found for sqlite3
+```
 
-- 前端應用：`https://您的網域/`
-- API 文檔：`https://您的網域/api/docs`
-- 系統狀態：`https://您的網域/api/status`
+**解決方案：**
+- `sqlite3` 是 Python 內建模組，已從 requirements 文件中移除
+- 確保使用最新的 `requirements-zeabur.txt`
 
-## 常見問題排解
+#### 3. 依賴版本衝突
+```
+ERROR: Could not find a version that satisfies the requirement
+```
 
-### API 服務無法啟動
+**解決方案：**
+- 使用 `requirements-zeabur.txt` 中的固定版本
+- 避免使用 `>=` 版本標記
 
-檢查環境變數是否正確設置，特別是 `DEEPSEEK_API_KEY`。
+#### 4. 內存不足
+```
+MemoryError: Unable to allocate array
+```
 
-### 索引建立失敗
+**解決方案：**
+- 升級 Zeabur 計劃以獲得更多 RAM
+- 使用較小的嵌入模型
 
-檢查 `/app/documents` 目錄是否已正確掛載並包含文檔文件。
+### 日誌檢查
 
-### 前後端連接問題
+在 Zeabur 控制台中檢查服務日誌：
 
-確保前端應用中的 API 基礎 URL 配置正確指向後端服務。
+1. 進入服務詳情頁面
+2. 點擊 "Logs" 標籤
+3. 查看錯誤信息
 
-## 更新部署
+### 性能優化
 
-當您需要更新應用時，只需將更新後的代碼推送到 Git 倉庫，Zeabur 將自動重新部署您的應用。 
+1. **使用較小的模型：**
+   ```python
+   EMBEDDING_MODEL = "BAAI/bge-small-zh"  # 替代 bge-base-zh
+   ```
+
+2. **限制並發請求：**
+   ```python
+   # 在 auth_api_server.py 中添加
+   import asyncio
+   semaphore = asyncio.Semaphore(5)  # 限制並發數
+   ```
+
+3. **啟用緩存：**
+   ```python
+   # 使用 Redis 或內存緩存
+   from functools import lru_cache
+   ```
+
+## 監控和維護
+
+### 健康檢查
+
+系統提供健康檢查端點：
+- `GET /health` - 基本健康狀態
+- `GET /status` - 用戶系統狀態
+
+### 數據備份
+
+重要數據存儲在持久化卷中：
+- `/app/user_documents` - 用戶文檔
+- `/app/user_indexes` - 向量索引
+- `/app/logs` - 系統日誌
+
+### 擴展建議
+
+1. **添加 Redis 緩存**
+2. **使用 PostgreSQL 替代 SQLite**
+3. **實現負載均衡**
+4. **添加監控和警報**
+
+## 安全注意事項
+
+1. **API 密鑰安全：**
+   - 不要在代碼中硬編碼 API 密鑰
+   - 使用環境變數存儲敏感信息
+
+2. **用戶認證：**
+   - 所有 API 端點都需要認證
+   - 使用 JWT 令牌進行身份驗證
+
+3. **文件上傳：**
+   - 限制文件大小和類型
+   - 掃描上傳文件的安全性
+
+4. **CORS 配置：**
+   - 只允許必要的來源
+   - 避免使用 `allow_origins=["*"]`
+
+## 聯繫支持
+
+如果遇到問題：
+
+1. 檢查 Zeabur 文檔
+2. 查看 GitHub Issues
+3. 聯繫技術支持
+
+## 更新日誌
+
+- **v2.0.0** - 添加用戶認證系統
+- **v1.1.0** - 優化 Zeabur 部署配置
+- **v1.0.0** - 初始版本 

@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 # 導入自定義模塊
@@ -68,7 +68,7 @@ user_kb_system = UserKnowledgeBaseSystem()
 # Pydantic 模型
 class UserRegister(BaseModel):
     username: str
-    email: EmailStr
+    email: str  # 使用 str 替代 EmailStr 以兼容較舊版本
     password: str
     full_name: Optional[str] = None
 
