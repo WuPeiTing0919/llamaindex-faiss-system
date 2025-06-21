@@ -11,8 +11,10 @@ if not exist "node_modules" (
     call npm install --legacy-peer-deps
 )
 
-:: 設定環境變數
-set NEXT_PUBLIC_API_URL=http://localhost:8000
+:: 設定環境變數，可由外部覆蓋
+if not defined NEXT_PUBLIC_API_URL (
+    set NEXT_PUBLIC_API_URL=http://localhost:8000
+)
 
 :: 啟動前端
 echo [前端] 啟動前端服務...
