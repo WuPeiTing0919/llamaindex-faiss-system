@@ -2,225 +2,151 @@
 
 ## 概述
 
-本指南將幫助您在 Zeabur 平台上部署支持用戶認證的 LlamaIndex + FAISS 知識庫系統。
+本指南將幫助您將 LlamaIndex + FAISS 企業知識庫系統部署到 Zeabur 平台。
 
-## 系統要求
+## 系統架構
 
-- Python 3.11+
-- Node.js 18+
-- 至少 1GB RAM
-- 至少 2GB 存儲空間
+部署後，系統將包含兩個服務：
+- **前端服務 (web)**: Next.js 應用，運行在端口 3000
+- **後端服務 (api)**: FastAPI 應用，運行在端口 8000
 
 ## 部署步驟
 
-### 1. 準備環境變數
+### 1. 準備代碼
 
-在 Zeabur 控制台中設置以下環境變數：
+確保您的代碼已經推送到 GitHub 倉庫。
+
+### 2. 在 Zeabur 中創建項目
+
+1. 登錄 [Zeabur](https://zeabur.com)
+2. 點擊 "New Project"
+3. 選擇 "GitHub" 並連接您的倉庫
+4. 選擇您的倉庫並點擊 "Deploy"
+
+### 3. 設置環境變數
+
+在 Zeabur 項目設置中，添加以下環境變數：
+
+#### 必需環境變數
 
 ```bash
-# DeepSeek API 配置
+# DeepSeek API 密鑰
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
 
-# 前端 URL (部署後更新)
-NEXT_PUBLIC_API_URL=https://your-app-name.zeabur.app/api
+# 前端 URL (您的 Zeabur 應用 URL)
 FRONTEND_URL=https://your-app-name.zeabur.app
 
-# 可選：允許所有來源 (開發用)
-ALLOW_ALL_ORIGINS=true
+# API 服務 URL (指向 API 服務的內部 URL)
+NEXT_PUBLIC_API_URL=https://your-app-name.zeabur.app/api
 ```
 
-**重要**: `NEXT_PUBLIC_API_URL` 應該指向 API 服務的 URL，通常是 `https://your-app-name.zeabur.app/api`
+#### 重要說明
 
-### 2. 部署到 Zeabur
+- `FRONTEND_URL`: 這是您的前端服務 URL，通常是 `https://your-app-name.zeabur.app`
+- `NEXT_PUBLIC_API_URL`: 這是前端用來訪問 API 的 URL，在 Zeabur 中應該是 `https://your-app-name.zeabur.app/api`
 
-1. 將代碼推送到 GitHub 倉庫
-2. 在 Zeabur 中連接 GitHub 倉庫
-3. 選擇 "Deploy from Git"
-4. 等待部署完成
+### 4. 部署配置
 
-### 3. 配置服務
+系統使用 `zeabur.toml` 配置文件，包含：
 
-系統會自動部署兩個服務：
+- **前端服務**: Next.js 應用，端口 3000
+- **後端服務**: Python FastAPI 應用，端口 8000
+- **持久化存儲**: 用戶文檔和索引存儲
 
-- **Web 服務** (Next.js 前端) - 端口 3000
-- **API 服務** (FastAPI 後端) - 端口 8000
+### 5. 驗證部署
 
-### 4. 驗證部署
+部署完成後，運行連接測試：
 
-1. 訪問前端 URL: `https://your-app-name.zeabur.app`
-2. 註冊新用戶
-3. 上傳測試文檔
-4. 測試查詢功能
+```bash
+python scripts/test_zeabur_connection.py https://your-app-name.zeabur.app/api
+```
 
 ## 故障排除
 
 ### 常見問題
 
-#### 1. Python 版本錯誤
-```
-ERROR: Ignored the following versions that require a different python version
-```
+#### 1. 404 錯誤 - 認證端點不存在
 
-**解決方案：**
-- 確保 `zeabur.toml` 中設置了 `pythonVersion = "3.11"`
-- 使用 `requirements-zeabur.txt` 而不是 `requirements.txt`
+**症狀**: 前端顯示 404 錯誤，無法訪問 `/auth/register` 或 `/auth/login`
 
-#### 2. sqlite3 模組錯誤
-```
-ERROR: No matching distribution found for sqlite3
-```
+**原因**: 環境變數配置錯誤或 API 服務未正確啟動
 
-**解決方案：**
-- `sqlite3` 是 Python 內建模組，已從 requirements 文件中移除
-- 確保使用最新的 `requirements-zeabur.txt`
+**解決方案**:
+1. 檢查 `NEXT_PUBLIC_API_URL` 環境變數是否正確設置
+2. 確保值為 `https://your-app-name.zeabur.app/api`
+3. 重新部署應用
 
-#### 3. 依賴版本衝突
-```
-ERROR: Could not find a version that satisfies the requirement
-```
+#### 2. CORS 錯誤
 
-**解決方案：**
-- 使用 `requirements-zeabur.txt` 中的固定版本
-- 避免使用 `>=` 版本標記
+**症狀**: 瀏覽器控制台顯示 CORS 錯誤
 
-#### 4. 內存不足
-```
-MemoryError: Unable to allocate array
-```
+**原因**: 前端和後端服務之間的跨域配置問題
 
-**解決方案：**
-- 升級 Zeabur 計劃以獲得更多 RAM
-- 使用較小的嵌入模型
+**解決方案**:
+1. 確保 `FRONTEND_URL` 環境變數正確設置
+2. 確保 `ALLOW_ALL_ORIGINS=true` 在 API 服務環境中
+3. 重新部署應用
 
-#### 5. API 連接問題 (404 錯誤)
-```
-POST https://your-app-name.zeabur.app/auth/register 404 (Not Found)
-```
+#### 3. API 服務無法啟動
 
-**解決方案：**
-1. **檢查環境變數**：
+**症狀**: 後端服務啟動失敗
+
+**原因**: Python 依賴或環境配置問題
+
+**解決方案**:
+1. 檢查 `scripts/requirements-zeabur.txt` 文件是否存在
+2. 確保 `DEEPSEEK_API_KEY` 環境變數已設置
+3. 查看 Zeabur 日誌以獲取詳細錯誤信息
+
+#### 4. 前端無法連接到 API
+
+**症狀**: 前端顯示連接錯誤
+
+**原因**: API URL 配置錯誤
+
+**解決方案**:
+1. 檢查 `NEXT_PUBLIC_API_URL` 是否指向正確的 API 服務
+2. 確保 URL 格式為 `https://your-app-name.zeabur.app/api`
+3. 測試 API 端點是否可訪問
+
+### 調試步驟
+
+1. **檢查環境變數**:
    ```bash
-   NEXT_PUBLIC_API_URL=https://your-app-name.zeabur.app/api
-   FRONTEND_URL=https://your-app-name.zeabur.app
+   python scripts/deploy_zeabur.py
    ```
 
-2. **檢查服務狀態**：
-   - 在 Zeabur 控制台中檢查 API 服務是否正常運行
-   - 查看服務日誌是否有錯誤
-
-3. **測試 API 端點**：
+2. **測試 API 連接**:
    ```bash
-   curl https://your-app-name.zeabur.app/api/health
+   python scripts/test_zeabur_connection.py https://your-app-name.zeabur.app/api
    ```
 
-4. **重新部署**：
-   - 推送新的代碼到 GitHub
-   - 在 Zeabur 中重新部署
+3. **檢查服務狀態**:
+   - 在 Zeabur 控制台中查看服務日誌
+   - 檢查前端和後端服務是否都在運行
 
-#### 6. CORS 錯誤
-```
-Access to fetch at '...' from origin '...' has been blocked by CORS policy
-```
+4. **驗證端點**:
+   - 訪問 `https://your-app-name.zeabur.app/api/health`
+   - 應該返回健康狀態
 
-**解決方案：**
-- 確保 `ALLOW_ALL_ORIGINS=true` 環境變數已設置
-- 檢查 `zeabur.toml` 中的 CORS 配置
+## 使用指南
 
-### 日誌檢查
+部署成功後：
 
-在 Zeabur 控制台中檢查服務日誌：
-
-1. 進入服務詳情頁面
-2. 點擊 "Logs" 標籤
-3. 查看錯誤信息
-
-### 服務連接測試
-
-部署完成後，請測試以下端點：
-
-```bash
-# 健康檢查
-curl https://your-app-name.zeabur.app/api/health
-
-# API 根路徑
-curl https://your-app-name.zeabur.app/api/
-
-# 註冊端點 (POST)
-curl -X POST https://your-app-name.zeabur.app/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"test","email":"test@example.com","password":"password"}'
-```
-
-### 性能優化
-
-1. **使用較小的模型：**
-   ```python
-   EMBEDDING_MODEL = "BAAI/bge-small-zh"  # 替代 bge-base-zh
-   ```
-
-2. **限制並發請求：**
-   ```python
-   # 在 auth_api_server.py 中添加
-   import asyncio
-   semaphore = asyncio.Semaphore(5)  # 限制並發數
-   ```
-
-3. **啟用緩存：**
-   ```python
-   # 使用 Redis 或內存緩存
-   from functools import lru_cache
-   ```
+1. **註冊用戶**: 訪問前端 URL 並註冊新用戶
+2. **上傳文檔**: 登錄後上傳 PDF 或 DOCX 文檔
+3. **查詢知識庫**: 使用自然語言查詢您的文檔
 
 ## 監控和維護
 
-### 健康檢查
+- 定期檢查 Zeabur 控制台中的服務狀態
+- 監控存儲使用情況
+- 查看應用日誌以識別問題
 
-系統提供健康檢查端點：
-- `GET /api/health` - 基本健康狀態
-- `GET /api/status` - 用戶系統狀態
-
-### 數據備份
-
-重要數據存儲在持久化卷中：
-- `/app/user_documents` - 用戶文檔
-- `/app/user_indexes` - 向量索引
-- `/app/logs` - 系統日誌
-
-### 擴展建議
-
-1. **添加 Redis 緩存**
-2. **使用 PostgreSQL 替代 SQLite**
-3. **實現負載均衡**
-4. **添加監控和警報**
-
-## 安全注意事項
-
-1. **API 密鑰安全：**
-   - 不要在代碼中硬編碼 API 密鑰
-   - 使用環境變數存儲敏感信息
-
-2. **用戶認證：**
-   - 所有 API 端點都需要認證
-   - 使用 JWT 令牌進行身份驗證
-
-3. **文件上傳：**
-   - 限制文件大小和類型
-   - 掃描上傳文件的安全性
-
-4. **CORS 配置：**
-   - 只允許必要的來源
-   - 避免使用 `allow_origins=["*"]`
-
-## 聯繫支持
+## 支持
 
 如果遇到問題：
-
-1. 檢查 Zeabur 文檔
-2. 查看 GitHub Issues
-3. 聯繫技術支持
-
-## 更新日誌
-
-- **v2.0.0** - 添加用戶認證系統
-- **v1.1.0** - 優化 Zeabur 部署配置
-- **v1.0.0** - 初始版本 
+1. 查看 Zeabur 控制台中的錯誤日誌
+2. 運行診斷腳本
+3. 檢查環境變數配置
+4. 重新部署應用 
