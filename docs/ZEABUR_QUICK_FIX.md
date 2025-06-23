@@ -20,8 +20,10 @@ POST https://llamaindex-faiss-system.zeabur.app/auth/login 404 (Not Found)
 在 Zeabur 控制台中，找到您的項目設置，添加以下環境變數：
 
 ```bash
-# 必需環境變數
-NEXT_PUBLIC_API_URL=https://llamaindex-faiss-system.zeabur.app/api
+# 關鍵修復：使用直接端點，不包含 /api 前綴
+NEXT_PUBLIC_API_URL=https://llamaindex-faiss-system.zeabur.app
+
+# 其他必需環境變數
 FRONTEND_URL=https://llamaindex-faiss-system.zeabur.app
 DEEPSEEK_API_KEY=your_actual_deepseek_api_key_here
 ```
@@ -58,7 +60,7 @@ DEEPSEEK_API_KEY=your_actual_deepseek_api_key_here
 python scripts/test_zeabur_connection.py https://llamaindex-faiss-system.zeabur.app/api
 
 # 或者運行診斷腳本
-python scripts/fix_zeabur_404.py https://llamaindex-faiss-system.zeabur.app/api
+python scripts/fix_zeabur_routing.py https://llamaindex-faiss-system.zeabur.app
 ```
 
 ## 預期結果

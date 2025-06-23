@@ -34,29 +34,14 @@ create_tables()
 
 app = FastAPI(title="企業知識庫 API (支持用戶認證)", version="2.0.0")
 
-# 設置允許的來源
-allowed_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://llamaindex-faiss-system.vercel.app",
-    "https://llamaindex-faiss-system-*.vercel.app",
-    "https://llamaindex-faiss-system.zeabur.app",
-]
-
-if os.getenv("FRONTEND_URL"):
-    allowed_origins.append(os.getenv("FRONTEND_URL"))
-
-if os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true":
-    allowed_origins = ["*"]
-
 # 添加 CORS 中間件
+# 在 API 代理架構下，CORS 限制可以放寬，因為請求是從 Vercel 伺服器發出的
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"],  # 允許所有來源
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["*"],  # 允許所有方法
+    allow_headers=["*"],  # 允許所有標頭
 )
 
 # 安全設置

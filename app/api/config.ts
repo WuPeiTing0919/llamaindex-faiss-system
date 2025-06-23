@@ -1,12 +1,13 @@
 /**
  * API 配置文件
- * 根據環境變數設置API的基礎URL
+ * 所有 API 請求都將通過 Next.js 的 API 代理路由
  */
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export const API_BASE_URL = '/api';
 
 /**
  * API 端點列表
+ * 這些端點會被代理到真實的後端服務
  */
 export const API_ENDPOINTS = {
   // 認證相關

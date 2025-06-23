@@ -24,6 +24,39 @@
       FRONTEND_URL = "$FRONTEND_URL"
       ALLOW_ALL_ORIGINS = "true"
 
+# 路由配置 - 確保 API 請求正確路由到 Python 服務
+[[routes]]
+  source = "/api"
+  destination = "api"
+
+[[routes]]
+  source = "/auth"
+  destination = "api"
+
+[[routes]]
+  source = "/health"
+  destination = "api"
+
+[[routes]]
+  source = "/status"
+  destination = "api"
+
+[[routes]]
+  source = "/query"
+  destination = "api"
+
+[[routes]]
+  source = "/upload"
+  destination = "api"
+
+[[routes]]
+  source = "/documents"
+  destination = "api"
+
+[[routes]]
+  source = "/"
+  destination = "web"
+
 [persistentVolumes]
   [persistentVolumes.storage]
     mountPath = "/app/user_documents"
