@@ -1,0 +1,45 @@
+# 告訴 Zeabur 忽略 Docker 相關文件，使用 zeabur.toml 配置
+
+# Docker 相關文件
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# 不需要的部署文件
+railway.json
+vercel.json
+
+# 前端相關（後端部署不需要）
+package.json
+package-lock.json
+pnpm-lock.yaml
+next.config.mjs
+tailwind.config.ts
+tsconfig.json
+postcss.config.mjs
+
+# 前端目錄
+app/
+components/
+hooks/
+lib/
+styles/
+public/
+
+# 開發文件
+.env
+.env.local
+.env.development
+.git/
+
+# 文檔目錄
+docs/
+*.md
+
+# 本地測試腳本
+run_*.py
+run_*.bat
+run_*.sh
+start_*.py
+start_*.bat
+start_*.sh 
