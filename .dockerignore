@@ -1,0 +1,96 @@
+# Docker 構建時忽略的文件和目錄
+
+# Node.js 前端文件（後端不需要）
+node_modules/
+.next/
+.vercel/
+package.json
+package-lock.json
+pnpm-lock.yaml
+tailwind.config.ts
+tsconfig.json
+next.config.mjs
+postcss.config.mjs
+
+# 前端組件和頁面
+app/
+components/
+hooks/
+lib/
+styles/
+public/
+
+# 本地開發文件
+.env
+.env.local
+.env.development
+.env.production
+*.log
+
+# Git 文件
+.git/
+.gitignore
+.gitattributes
+
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系統文件
+.DS_Store
+Thumbs.db
+
+# Python 緩存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虛擬環境
+venv/
+env/
+ENV/
+
+# 本地數據（生產環境會掛載持久化存儲）
+user_documents/
+user_indexes/
+faiss_index/
+knowledge_base.db
+logs/
+
+# 部署相關
+vercel.json
+railway.json
+docs/
+README.md
+DEPLOYMENT_*.md
+QUICK_FIX_*.md
+
+# 舊版 API 備份
+scripts/api_server_old.py.bak
+scripts/setup_knowledge_base.py
+
+# 批處理腳本
+*.bat
+*.sh
+run_*.py
+start_*.bat
+start_*.sh 
