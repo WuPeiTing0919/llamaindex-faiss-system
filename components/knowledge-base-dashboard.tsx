@@ -10,9 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
-import { useAuth } from "@/components/auth/auth-context"
-import { UserDropdown } from "@/components/user-dropdown"
-import { SystemSettings } from "@/components/system-settings"
+import { useAuth, UserDropdown, SystemSettings } from "@/components"
 
 // API 基礎 URL 設置
 const getApiBaseUrl = () => {

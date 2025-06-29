@@ -1,10 +1,8 @@
 "use client"
 
 import React from "react"
-import { useAuth } from "@/components/auth/auth-context"
+import { useAuth, KnowledgeBaseDashboard, ApiConfigError } from "@/components"
 import { AuthPage } from "./auth-page"
-import { KnowledgeBaseDashboard } from "@/components/knowledge-base-dashboard"
-import { ApiConfigError } from "@/components/api-config-error"
 import { Loader2 } from "lucide-react"
 
 // API URL 配置檢查

@@ -1,8 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { LoginForm } from '@/components/auth/login-form'
-import { RegisterForm } from '@/components/auth/register-form'
+import { LoginForm, RegisterForm } from '@/components'
 
 export const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true)

@@ -20,7 +20,7 @@ import {
   Settings,
   ChevronDown
 } from "lucide-react"
-import { useAuth } from '@/components/auth/auth-context'
+import { useAuth } from '@/components'
 
 export const UserDropdown: React.FC = () => {
   const { user, logout } = useAuth()
@@ -98,11 +98,11 @@ export const UserDropdown: React.FC = () => {
             </div>
           )}
           
-          {user.created_at && (
+          {(user as any).created_at && (
             <div className="flex items-center space-x-2 text-sm">
               <Calendar className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">加入時間:</span>
-              <span className="font-medium">{formatDate(user.created_at)}</span>
+              <span className="font-medium">{formatDate((user as any).created_at)}</span>
             </div>
           )}
         </div>
