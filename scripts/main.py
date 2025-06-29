@@ -81,8 +81,8 @@ try:
         print("❌ 錯誤：導入的不是認證版應用！")
         sys.exit(1)
     
-    # 獲取配置
-    port = int(os.getenv('PORT', 8000))
+    # 獲取配置 - Zeabur 通常使用 8080 端口
+    port = int(os.getenv('PORT', 8080))
     host = "0.0.0.0"
     
     print(f"✓ 服務器地址: {host}:{port}")

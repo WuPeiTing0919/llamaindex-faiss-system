@@ -45,12 +45,12 @@ RUN mkdir -p user_documents user_indexes logs faiss_index .cache/torch .cache/hu
 # 設置權限
 RUN chmod -R 755 /app
 
-# 暴露端口
-EXPOSE 8000
+# 暴露端口 - 使用環境變數
+EXPOSE 8080
 
-# 健康檢查 - 給更多時間讓 AI 模型載入
+# 健康檢查 - 給更多時間讓 AI 模型載入，使用動態端口
 HEALTHCHECK --interval=45s --timeout=15s --start-period=180s --retries=5 \
-    CMD curl -f http://localhost:8000/health || curl -f http://localhost:8000/ || exit 1
+    CMD curl -f http://localhost:${PORT:-8080}/health || curl -f http://localhost:${PORT:-8080}/ || exit 1
 
 # 運行容器優化版啟動腳本
 CMD ["python", "scripts/start_server.py"] 

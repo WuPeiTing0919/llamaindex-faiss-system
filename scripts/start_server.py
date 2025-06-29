@@ -41,11 +41,12 @@ def main():
         log("❌ auth_api_server.py 不存在")
         return 1
     
-    # 獲取配置
-    port = int(os.getenv('PORT', 8000))
+    # 獲取配置 - Zeabur 通常使用 8080 端口
+    port = int(os.getenv('PORT', 8080))
     host = "0.0.0.0"
     
     log(f"🌐 服務器: {host}:{port}")
+    log(f"💡 健康檢查 URL: http://localhost:{port}/health")
     
     try:
         # 導入應用
