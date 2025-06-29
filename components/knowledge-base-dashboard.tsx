@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
-import { Upload, Search, FileText, Database, Cpu, MessageSquare, Loader2, Trash2, User, LogOut } from "lucide-react"
+import { Upload, Search, FileText, Database, Settings, MessageSquare, Loader2, Trash2, User, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/components/auth/auth-context"
-import { UserProfile } from "@/components/auth/user-profile"
+import { UserDropdown } from "@/components/user-dropdown"
+import { SystemSettings } from "@/components/system-settings"
 
 // API 基礎 URL 設置
 const getApiBaseUrl = () => {
@@ -299,14 +300,11 @@ export const KnowledgeBaseDashboard: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            <Badge variant="outline">
-              <User className="w-3 h-3 mr-1" />
-              {user.username}
+            <Badge variant="outline" className="flex items-center space-x-1">
+              <User className="w-3 h-3" />
+              <span>{user.username}</span>
             </Badge>
-            <Button variant="outline" onClick={logout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              登出
-            </Button>
+            <UserDropdown />
           </div>
         </div>
 
@@ -349,7 +347,7 @@ export const KnowledgeBaseDashboard: React.FC = () => {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="query">智能問答</TabsTrigger>
             <TabsTrigger value="upload">文檔管理</TabsTrigger>
-            <TabsTrigger value="profile">個人資料</TabsTrigger>
+            <TabsTrigger value="settings">系統設定</TabsTrigger>
           </TabsList>
 
           {/* 智能問答 */}
@@ -478,9 +476,9 @@ export const KnowledgeBaseDashboard: React.FC = () => {
             </Card>
           </TabsContent>
 
-          {/* 個人資料 */}
-          <TabsContent value="profile" className="space-y-4">
-            <UserProfile />
+          {/* 系統設定 */}
+          <TabsContent value="settings" className="space-y-4">
+            <SystemSettings />
           </TabsContent>
         </Tabs>
       </div>

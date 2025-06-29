@@ -22,7 +22,9 @@ app = FastAPI(title="企業知識庫 API", version="1.0.0")
 # 設置允許的來源
 allowed_origins = [
     "http://localhost:3000",
+    "http://localhost:3001",
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
     "https://llamaindex-faiss-system.vercel.app",
     "https://llamaindex-faiss-system-*.vercel.app",  # Vercel 預覽部署
     "https://llamaindex-faiss-system.zeabur.app",
