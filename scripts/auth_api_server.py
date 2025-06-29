@@ -88,8 +88,29 @@ app.add_middleware(
 # 安全設置
 security = HTTPBearer()
 
-# 全局知識庫實例
-user_kb_system = UserKnowledgeBaseSystem()
+# 全局知識庫實例 - 帶錯誤處理
+user_kb_system = None
+kb_system_error = None
+
+def initialize_kb_system():
+    """初始化知識庫系統，帶錯誤處理"""
+    global user_kb_system, kb_system_error
+    
+    try:
+        print("🔄 正在初始化 AI 知識庫系統...")
+        user_kb_system = UserKnowledgeBaseSystem()
+        print("✅ AI 知識庫系統初始化成功")
+        kb_system_error = None
+        return True
+    except Exception as e:
+        print(f"⚠️ AI 知識庫系統初始化失敗: {e}")
+        print("💡 系統將以基礎模式運行（不含 AI 功能）")
+        user_kb_system = None
+        kb_system_error = str(e)
+        return False
+
+# 嘗試初始化知識庫系統
+initialize_kb_system()
 
 # Pydantic 模型
 class UserRegister(BaseModel):
@@ -294,32 +315,58 @@ async def upload_document(
                 detail=f"文件大小 {file_size / (1024*1024):.2f}MB 超過 500MB 限制"
             )
         
-        # 保存文件到用戶專屬目錄
-        file_path = user_kb_system.save_user_document(
-            user_id=current_user.id,
-            filename=file.filename,
-            content=file_content
-        )
+        # 檢查 AI 系統是否可用
+        if user_kb_system is None:
+            # AI 系統不可用，只做基本文件存儲
+            user_docs_folder = Path("user_documents") / f"user_{current_user.id}"
+            user_docs_folder.mkdir(parents=True, exist_ok=True)
+            
+            # 生成唯一文件名
+            import uuid
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            file_path = user_docs_folder / unique_filename
+            
+            # 保存文件
+            with open(file_path, 'wb') as f:
+                f.write(file_content)
+            
+            file_path_str = str(file_path)
+        else:
+            # AI 系統可用，使用完整功能
+            file_path_str = user_kb_system.save_user_document(
+                user_id=current_user.id,
+                filename=file.filename,
+                content=file_content
+            )
         
         # 在數據庫中記錄文檔信息
         db_document = create_document(
             db=db,
-            filename=Path(file_path).name,
+            filename=Path(file_path_str).name,
             original_filename=file.filename,
-            file_path=file_path,
+            file_path=file_path_str,
             file_size=file_size,
             content_type=file.content_type or "application/octet-stream",
             owner_id=current_user.id
         )
         
-        # 重新建立用戶索引
-        user_kb_system.build_user_index(current_user.id)
+        # 嘗試重建用戶索引
+        index_status = "基礎存儲模式"
+        if user_kb_system is not None:
+            try:
+                user_kb_system.build_user_index(current_user.id)
+                index_status = "AI 索引已更新"
+            except Exception as e:
+                print(f"索引建立失敗: {e}")
+                index_status = f"索引建立失敗: {str(e)}"
         
         return {
             "message": f"文檔 {file.filename} 上傳成功",
             "document_id": db_document.id,
             "filename": file.filename,
-            "size": file_size
+            "size": file_size,
+            "index_status": index_status,
+            "ai_enabled": user_kb_system is not None
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"上傳失敗: {str(e)}")
@@ -331,9 +378,20 @@ async def query_knowledge_base(
     db: Session = Depends(get_db)
 ):
     """查詢個人知識庫 (需要認證)"""
+    start_time = time.time()
+    
+    # 檢查 AI 系統是否可用
+    if user_kb_system is None:
+        return {
+            "query": request.query,
+            "answer": f"AI 查詢功能暫時不可用。錯誤信息：{kb_system_error or '未知錯誤'}。\n\n您的文檔已安全存儲，一旦 AI 系統恢復，即可進行智能查詢。",
+            "sources": [],
+            "processing_time": time.time() - start_time,
+            "ai_enabled": False,
+            "error": "AI system unavailable"
+        }
+    
     try:
-        start_time = time.time()
-        
         # 搜索用戶的文檔
         search_results = user_kb_system.search_user_documents(
             user_id=current_user.id,
@@ -346,7 +404,8 @@ async def query_knowledge_base(
                 "query": request.query,
                 "answer": "抱歉，在您的文檔中沒有找到相關信息。請先上傳一些文檔。",
                 "sources": [],
-                "processing_time": time.time() - start_time
+                "processing_time": time.time() - start_time,
+                "ai_enabled": True
             }
         
         # 提取最相關的上下文文檔
@@ -366,10 +425,18 @@ async def query_knowledge_base(
             "query": request.query,
             "answer": answer,
             "sources": search_results,
-            "processing_time": processing_time
+            "processing_time": processing_time,
+            "ai_enabled": True
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"查詢失敗: {str(e)}")
+        return {
+            "query": request.query,
+            "answer": f"查詢過程中遇到錯誤：{str(e)}。請稍後重試或聯繫管理員。",
+            "sources": [],
+            "processing_time": time.time() - start_time,
+            "ai_enabled": True,
+            "error": str(e)
+        }
 
 @app.get("/documents", response_model=List[DocumentInfo])
 async def list_user_documents(
@@ -402,10 +469,21 @@ async def delete_user_document(
     if not success:
         raise HTTPException(status_code=404, detail="文檔不存在或無權限刪除")
     
-    # 重新建立用戶索引
-    user_kb_system.build_user_index(current_user.id)
+    # 嘗試重新建立用戶索引
+    index_status = "文檔已刪除"
+    if user_kb_system is not None:
+        try:
+            user_kb_system.build_user_index(current_user.id)
+            index_status = "文檔已刪除，AI 索引已更新"
+        except Exception as e:
+            print(f"索引更新失敗: {e}")
+            index_status = "文檔已刪除，但索引更新失敗"
     
-    return {"message": "文檔刪除成功"}
+    return {
+        "message": "文檔刪除成功",
+        "index_status": index_status,
+        "ai_enabled": user_kb_system is not None
+    }
 
 @app.get("/status")
 async def get_user_status(
@@ -415,6 +493,9 @@ async def get_user_status(
     """獲取用戶系統狀態 (需要認證)"""
     # 從數據庫獲取用戶的真實文檔數量
     user_documents = get_user_documents(db, current_user.id)
+    
+    # 檢查 AI 系統狀態
+    ai_status = "ready" if user_kb_system is not None else "unavailable"
     
     # 獲取用戶的默認模型
     default_model_pref = get_user_default_model(db, current_user.id)
@@ -440,23 +521,31 @@ async def get_user_status(
         "has_api_key": current_model["api_key_set"]
     }
     
-    return {
+    status_response = {
         "status": "running",
         "user_id": current_user.id,
         "username": current_user.username,
         "documents_count": len(user_documents),
         "index_size": len(user_documents),  # 簡化為文檔數量
-        "model_status": "ready",
+        "model_status": ai_status,
         "memory_usage": "1.2GB",
         "cpu_usage": "25%",
         "current_model": current_model,  # 新格式
         "user_ai_model": user_ai_model,  # 兼容舊格式
+        "ai_enabled": user_kb_system is not None,
         "embedding_model": {
             "name": "BAAI/bge-base-zh", 
             "provider": "huggingface",
-            "description": "向量化文檔"
+            "description": "向量化文檔" if user_kb_system is not None else "AI系統暫時不可用"
         }
     }
+    
+    # 如果 AI 系統不可用，添加錯誤信息
+    if user_kb_system is None:
+        status_response["ai_error"] = kb_system_error
+        status_response["message"] = "系統運行中，但 AI 功能暫時不可用"
+    
+    return status_response
 
 @app.get("/health")
 async def health_check():

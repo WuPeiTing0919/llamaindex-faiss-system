@@ -1,11 +1,11 @@
-# 告訴 Zeabur 忽略 Docker 相關文件，使用 zeabur.toml 配置
+# 告訴 Zeabur 使用 Docker 部署
 
-# Docker 相關文件
-Dockerfile
+# 忽略原生部署配置文件（我們使用 Docker）
+zeabur.toml
+
+# 其他部署文件
 .dockerignore
 docker-compose.yml
-
-# 不需要的部署文件
 railway.json
 vercel.json
 

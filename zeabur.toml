@@ -10,7 +10,8 @@ python_version = "3.11"
 
 # 指定依賴文件（會依序嘗試）
 requirements = [
-    "scripts/requirements-minimal.txt",  # 優先使用最小化依賴
+    "scripts/requirements-api-only.txt", # 優先使用純 API 版本（最穩定）
+    "scripts/requirements-minimal.txt",  # 備用最小化依賴
     "scripts/requirements-zeabur.txt",   # 備用完整依賴
     "scripts/requirements.txt"           # 最後備用
 ]

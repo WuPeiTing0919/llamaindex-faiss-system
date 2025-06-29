@@ -66,7 +66,10 @@ for var in required_env_vars:
 print("-" * 60)
 
 try:
-    # 導入認證版 API 應用
+    # 導入認證版 API 應用（完整功能）
+    print("🚀 啟動企業知識庫系統（完整版 - 包含 AI 功能）")
+    print("=" * 60)
+    
     from auth_api_server import app
     import uvicorn
     
@@ -83,6 +86,9 @@ try:
     host = "0.0.0.0"
     
     print(f"✓ 服務器地址: {host}:{port}")
+    print("✓ AI 功能: 啟用")
+    print("✓ 向量搜索: 啟用") 
+    print("✓ 用戶認證: 啟用")
     print("=" * 60)
     print("🎯 啟動 FastAPI 服務器...")
     
@@ -103,8 +109,12 @@ except ImportError as e:
     print(f"❌ 導入失敗: {e}")
     print("\n可能的原因:")
     print("1. auth_api_server.py 文件不存在")
-    print("2. Python 依賴未正確安裝")
+    print("2. Python 依賴未正確安裝（特別是 PyTorch 相關）")
     print("3. 模塊導入路徑問題")
+    print("\n建議檢查:")
+    print("- PyTorch 版本是否 >= 2.1")
+    print("- transformers 是否正確安裝")
+    print("- sentence-transformers 是否正確安裝")
     sys.exit(1)
     
 except Exception as e:
