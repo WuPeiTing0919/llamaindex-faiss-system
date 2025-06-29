@@ -6,10 +6,17 @@
 import time
 import base64
 import os
+import sys
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional, Annotated
+
+# 添加項目根目錄到 Python 路徑（用於雲端部署）
+current_dir = Path(__file__).parent
+parent_dir = current_dir.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Form
@@ -19,31 +26,52 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 # 導入自定義模塊
-from database import (
-    create_tables, get_db, User, Document, AIModel, UserAIModelPreference,
-    create_user, authenticate_user, get_user_by_username, get_user_by_email,
-    create_access_token, verify_token, create_document, get_user_documents, delete_document,
-    create_builtin_models, get_available_models, create_custom_model, delete_custom_model,
-    set_user_model_preference, get_user_model_preferences, get_user_default_model, 
-    delete_user_model_preference, delete_user_model_preference_by_id
-)
-from user_knowledge_base import UserKnowledgeBaseSystem
+try:
+    from scripts.database import (
+        create_tables, get_db, User, Document, AIModel, UserAIModelPreference,
+        create_user, authenticate_user, get_user_by_username, get_user_by_email,
+        create_access_token, verify_token, create_document, get_user_documents, delete_document,
+        create_builtin_models, get_available_models, create_custom_model, delete_custom_model,
+        set_user_model_preference, get_user_model_preferences, get_user_default_model, 
+        delete_user_model_preference, delete_user_model_preference_by_id
+    )
+    from scripts.user_knowledge_base import UserKnowledgeBaseSystem
+except ImportError:
+    # 本地開發環境的導入方式
+    from database import (
+        create_tables, get_db, User, Document, AIModel, UserAIModelPreference,
+        create_user, authenticate_user, get_user_by_username, get_user_by_email,
+        create_access_token, verify_token, create_document, get_user_documents, delete_document,
+        create_builtin_models, get_available_models, create_custom_model, delete_custom_model,
+        set_user_model_preference, get_user_model_preferences, get_user_default_model, 
+        delete_user_model_preference, delete_user_model_preference_by_id
+    )
+    from user_knowledge_base import UserKnowledgeBaseSystem
 
 # 載入環境變數
 load_dotenv()
+load_dotenv(dotenv_path=parent_dir / '.env')  # 嘗試從項目根目錄加載
 
 # 創建數據庫表
 create_tables()
 
 # 初始化內建模型
-from sqlalchemy.orm import sessionmaker
-from database import engine
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-db = SessionLocal()
 try:
-    create_builtin_models(db)
-finally:
-    db.close()
+    from sqlalchemy.orm import sessionmaker
+    try:
+        from scripts.database import engine
+    except ImportError:
+        from database import engine
+    
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = SessionLocal()
+    try:
+        create_builtin_models(db)
+    finally:
+        db.close()
+except Exception as e:
+    print(f"數據庫初始化警告: {e}")
+    # 繼續運行，可能在後續請求中重新初始化
 
 app = FastAPI(title="企業知識庫 API (支持用戶認證)", version="2.0.0")
 

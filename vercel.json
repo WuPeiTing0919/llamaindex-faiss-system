@@ -6,12 +6,11 @@
   "outputDirectory": ".next",
   "regions": ["hkg1"],
   "env": {
-    "NEXT_PUBLIC_API_URL": "PLACEHOLDER_API_URL"
+    "NEXT_PUBLIC_API_URL": "@zeabur_api_url"
   },
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "PLACEHOLDER_API_URL/api/:path*"
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "@zeabur_api_url"
     }
-  ]
+  }
 } 

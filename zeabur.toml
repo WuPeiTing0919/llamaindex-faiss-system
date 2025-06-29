@@ -2,20 +2,11 @@
   buildCommand = "npm run build"
 
 [services]
-  [services.web]
-    type = "nextjs"
-    buildCommand = "npm run build"
-    startCommand = "npm run start"
-    port = 3000
-    [services.web.env]
-      NODE_ENV = "production"
-      NEXT_PUBLIC_API_URL = "$NEXT_PUBLIC_API_URL"
-
   [services.api]
     type = "python"
     pythonVersion = "3.11"
     buildCommand = "pip install -r scripts/requirements-zeabur.txt"
-    startCommand = "python scripts/auth_api_server.py"
+    startCommand = "python scripts/start_zeabur.py"
     port = 8000
     [services.api.env]
       DEEPSEEK_API_KEY = "$DEEPSEEK_API_KEY"
@@ -23,39 +14,13 @@
       MODEL_NAME = "deepseek-chat"
       FRONTEND_URL = "$FRONTEND_URL"
       ALLOW_ALL_ORIGINS = "true"
+      PYTHONPATH = "/app"
+      PYTHONUNBUFFERED = "1"
 
-# 路由配置 - 確保 API 請求正確路由到 Python 服務
-[[routes]]
-  source = "/api"
-  destination = "api"
-
-[[routes]]
-  source = "/auth"
-  destination = "api"
-
-[[routes]]
-  source = "/health"
-  destination = "api"
-
-[[routes]]
-  source = "/status"
-  destination = "api"
-
-[[routes]]
-  source = "/query"
-  destination = "api"
-
-[[routes]]
-  source = "/upload"
-  destination = "api"
-
-[[routes]]
-  source = "/documents"
-  destination = "api"
-
+# 路由配置 - 所有請求都路由到 API 服務
 [[routes]]
   source = "/"
-  destination = "web"
+  destination = "api"
 
 [persistentVolumes]
   [persistentVolumes.storage]
