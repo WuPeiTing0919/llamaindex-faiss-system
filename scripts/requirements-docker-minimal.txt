@@ -1,0 +1,40 @@
+# Docker 最小化依賴 - 確保啟動成功
+# 注意：PyTorch 在 Dockerfile 中單獨安裝
+
+# Web 框架（核心）
+fastapi==0.100.1
+uvicorn[standard]==0.22.0
+
+# 認證和安全
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# 數據庫
+sqlalchemy==1.4.49
+
+# AI 和機器學習（兼容 PyTorch 2.1+）
+transformers==4.35.0
+sentence-transformers==2.2.2
+llama-index==0.8.69
+
+# 向量數據庫
+faiss-cpu==1.7.4
+
+# 文檔處理
+pypdf==3.17.0
+
+# 基礎工具
+requests==2.31.0
+python-dotenv==1.0.0
+pydantic==1.10.12
+loguru==0.6.0
+psutil==5.9.6
+email-validator==2.1.0
+
+# 數值計算
+numpy==1.24.4
+scipy==1.10.1
+
+# 實用工具
+aiofiles==23.2.1 

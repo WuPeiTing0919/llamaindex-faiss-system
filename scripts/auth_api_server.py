@@ -550,7 +550,12 @@ async def get_user_status(
 @app.get("/health")
 async def health_check():
     """健康檢查 (無需認證)"""
-    return {"status": "healthy", "timestamp": datetime.utcnow()}
+    return {
+        "status": "healthy", 
+        "timestamp": datetime.utcnow(),
+        "ai_system": "ready" if user_kb_system is not None else "initializing",
+        "version": "2.0.0"
+    }
 
 # AI模型管理端點
 @app.get("/ai-models", response_model=List[AIModelInfo])

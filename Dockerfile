@@ -23,7 +23,7 @@ ENV HF_HOME=/app/.cache/huggingface
 RUN pip install --no-cache-dir torch==2.1.0+cpu torchvision==0.16.0+cpu torchaudio==2.1.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # 複製依賴文件
-COPY scripts/requirements-zeabur-fixed.txt ./requirements.txt
+COPY scripts/requirements-docker-minimal.txt ./requirements.txt
 
 # 安裝其他依賴
 RUN pip install --no-cache-dir -r requirements.txt
@@ -48,9 +48,9 @@ RUN chmod -R 755 /app
 # 暴露端口
 EXPOSE 8000
 
-# 健康檢查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+# 健康檢查 - 給更多時間讓 AI 模型載入
+HEALTHCHECK --interval=45s --timeout=15s --start-period=180s --retries=5 \
+    CMD curl -f http://localhost:8000/health || curl -f http://localhost:8000/ || exit 1
 
-# 運行認證版 API 服務器
-CMD ["python", "scripts/main.py"] 
+# 運行容器優化版啟動腳本
+CMD ["python", "scripts/start_server.py"] 
