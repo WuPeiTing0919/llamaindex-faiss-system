@@ -1,0 +1,28 @@
+# 最小化依賴 - Zeabur 部署用（避免版本衝突）
+
+# Web 框架（核心）
+fastapi>=0.100.0
+uvicorn>=0.22.0
+
+# 認證（必需）
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+sqlalchemy>=1.4.0
+email-validator>=2.0.0
+
+# 基礎工具
+requests>=2.31.0
+python-dotenv>=1.0.0
+pydantic>=1.10.0
+loguru>=0.6.0
+
+# 向量搜索（輕量）
+faiss-cpu>=1.7.4
+numpy>=1.21.0
+
+# 文檔處理（基本）
+pypdf>=3.0.0
+
+# LlamaIndex（核心）
+llama-index>=0.10.0 

@@ -1,41 +1,38 @@
-# Zeabur 部署專用依賴 (Python 3.8+ 兼容版本)
+# Zeabur 部署專用依賴 - 修復版本衝突
 
-# Web 框架
-fastapi==0.95.2
-uvicorn==0.22.0
+# 核心框架 (使用相容版本)
+llama-index>=0.10.0,<0.13.0
+llama-index-vector-stores-faiss>=0.1.0,<0.3.0
 
-# 用戶認證相關
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
-sqlalchemy==1.4.49
-email-validator==1.3.1
-
-# 工具庫
-requests==2.31.0
-python-dotenv==1.0.0
-pydantic==1.10.8
-
-# 日誌
-loguru==0.6.0
-
-# 向量搜索 (輕量版本)
-faiss-cpu==1.7.4
-sentence-transformers==2.2.2
+# 向量搜索
+faiss-cpu>=1.7.4,<1.8.0
+sentence-transformers>=2.2.2,<3.0.0
 
 # 文檔處理
-pypdf==3.17.4
-python-docx==0.8.11
+pypdf>=3.17.0,<4.0.0
+python-docx>=0.8.11,<1.0.0
 
-# 機器學習 (輕量版本)
-torch==1.13.1
-transformers==4.30.2
-numpy==1.24.3
+# 機器學習 (穩定版本)
+torch>=1.13.1,<2.0.0
+transformers>=4.30.0,<5.0.0
+numpy>=1.24.0,<2.0.0
 
-# 核心框架 (輕量版本)
-llama-index==0.9.0
-llama-index-vector-stores-faiss==0.1.0
+# Web 框架 (較新穩定版本)
+fastapi>=0.100.0,<0.110.0
+uvicorn>=0.22.0,<0.25.0
 
-# 額外的依賴
-psutil==5.9.5
-pathlib2==2.3.7 
+# 用戶認證相關
+python-jose[cryptography]>=3.3.0,<4.0.0
+passlib[bcrypt]>=1.7.4,<2.0.0
+python-multipart>=0.0.6,<1.0.0
+sqlalchemy>=1.4.49,<2.0.0
+email-validator>=1.3.1,<3.0.0
+
+# 工具庫
+requests>=2.31.0,<3.0.0
+python-dotenv>=1.0.0,<2.0.0
+pydantic>=1.10.8,<2.0.0
+
+# 日誌和監控
+loguru>=0.6.0,<1.0.0
+psutil>=5.9.5,<6.0.0 

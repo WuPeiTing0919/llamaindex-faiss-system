@@ -9,11 +9,17 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# 複製 Zeabur 專用依賴文件
-COPY scripts/requirements-zeabur.txt ./requirements-zeabur.txt
+# 升級 pip 和安裝構建工具
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# 安裝 Python 依賴
-RUN pip install --no-cache-dir -r requirements-zeabur.txt
+# 複製依賴文件
+COPY scripts/requirements-zeabur.txt ./requirements-zeabur.txt
+COPY scripts/requirements-minimal.txt ./requirements-minimal.txt
+
+# 安裝 Python 依賴（帶後備方案）
+RUN pip install --no-cache-dir -r requirements-zeabur.txt || \
+    (echo "主要依賴安裝失敗，嘗試最小化依賴..." && \
+     pip install --no-cache-dir -r requirements-minimal.txt)
 
 # 複製應用代碼
 COPY scripts/ ./scripts/
