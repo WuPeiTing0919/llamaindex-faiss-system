@@ -731,6 +731,81 @@ async def set_user_model_preference_endpoint(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"設定偏好失敗: {str(e)}")
 
+@app.put("/user/model-preferences/{preference_id}", response_model=UserModelPreferenceInfo)
+async def update_user_model_preference_endpoint(
+    preference_id: int,
+    preference_data: SetModelPreference,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """更新用戶的模型偏好設定"""
+    try:
+        # 檢查偏好設定是否存在且屬於當前用戶
+        existing_pref = db.query(UserAIModelPreference).filter(
+            UserAIModelPreference.id == preference_id,
+            UserAIModelPreference.user_id == current_user.id
+        ).first()
+        
+        if not existing_pref:
+            raise HTTPException(status_code=404, detail="偏好設定不存在")
+        
+        # 檢查新模型是否存在
+        model = db.query(AIModel).filter(
+            AIModel.id == preference_data.model_id,
+            AIModel.is_active == True
+        ).first()
+        
+        if not model:
+            raise HTTPException(status_code=404, detail="模型不存在")
+        
+        # 如果設為默認，先取消其他默認設定
+        if preference_data.is_default:
+            db.query(UserAIModelPreference).filter(
+                UserAIModelPreference.user_id == current_user.id,
+                UserAIModelPreference.id != preference_id
+            ).update({"is_default": False})
+        
+        # 更新偏好設定
+        existing_pref.model_id = preference_data.model_id
+        if preference_data.api_key:
+            existing_pref.api_key = preference_data.api_key
+        existing_pref.is_default = preference_data.is_default
+        
+        db.commit()
+        db.refresh(existing_pref)
+        
+        # 獲取模型的創建者用戶名
+        created_by_username = None
+        if model.created_by_user_id:
+            if model.created_by:
+                created_by_username = model.created_by.username
+        
+        model_info = AIModelInfo(
+            id=model.id,
+            name=model.name,
+            provider=model.provider,
+            model_id=model.model_id,
+            api_base_url=model.api_base_url,
+            description=model.description,
+            is_built_in=model.is_built_in,
+            is_active=model.is_active,
+            created_at=model.created_at,
+            created_by_username=created_by_username
+        )
+        
+        return UserModelPreferenceInfo(
+            id=existing_pref.id,
+            model_id=existing_pref.model_id,
+            api_key_set=bool(existing_pref.api_key),
+            is_default=existing_pref.is_default,
+            created_at=existing_pref.created_at,
+            model=model_info
+        )
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=400, detail=f"更新偏好失敗: {str(e)}")
+
 @app.delete("/user/model-preferences/{preference_id}")
 async def delete_user_model_preference_endpoint(
     preference_id: int,
