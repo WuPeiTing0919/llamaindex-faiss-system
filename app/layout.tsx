@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ViewportProvider } from '@/components/ui/viewport-provider'
-import { ThemeProvider, AuthProvider } from '@/components'
+import { ThemeProvider } from '@/components/theme-provider'
+import { AuthProvider } from '@/components/auth/auth-context'
 
 export const metadata: Metadata = {
   title: '企業知識庫系統',

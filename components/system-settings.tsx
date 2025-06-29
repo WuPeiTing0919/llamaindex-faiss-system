@@ -29,7 +29,7 @@ import {
   HardDrive,
   BarChart3
 } from "lucide-react"
-import { useAuth } from "@/components"
+import { useAuth } from "@/components/auth/auth-context"
 
 // API 基礎 URL 設置
 const getApiBaseUrl = () => {

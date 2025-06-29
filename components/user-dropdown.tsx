@@ -20,7 +20,7 @@ import {
   Settings,
   ChevronDown
 } from "lucide-react"
-import { useAuth } from '@/components'
+import { useAuth } from '@/components/auth/auth-context'
 
 export const UserDropdown: React.FC = () => {
   const { user, logout } = useAuth()

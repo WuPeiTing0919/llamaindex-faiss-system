@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, LogIn } from "lucide-react"
-import { useAuth } from '@/components'
+import { useAuth } from './auth-context'
 
 interface LoginFormProps {
   onSwitchToRegister: () => void
