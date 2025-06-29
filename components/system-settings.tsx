@@ -1,41 +1,35 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Switch } from "@/components/ui/switch"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { 
+  Loader2, 
+  Plus, 
+  Trash2, 
+  RefreshCw, 
   Settings, 
-  Cpu, 
-  Database, 
+  Brain, 
+  User, 
+  Check, 
+  AlertCircle, 
+  Zap, 
   Activity, 
-  CheckCircle, 
-  XCircle, 
-  RefreshCw,
   Server,
-  Zap,
-  BarChart3,
+  Database,
   Clock,
-  HardDrive,
   Wifi,
-  AlertTriangle,
-  Plus,
-  Edit,
-  Trash2,
-  Star,
-  Eye,
-  EyeOff
+  HardDrive,
+  BarChart3
 } from "lucide-react"
-import { useAuth } from '@/components/auth/auth-context'
+import { useAuth } from "@/components/auth/auth-context"
 
 // API 基礎 URL 設置
 const getApiBaseUrl = () => {
@@ -52,23 +46,22 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl()
 
 interface SystemInfo {
-  api_status: 'connected' | 'disconnected' | 'error'
-  response_time: number
+  status: string
   documents_count: number
-  index_size: number
-  memory_usage: string
-  cpu_usage: string
-  uptime: string
-  current_model: {
+  api_response_time?: number
+  memory_usage?: string
+  cpu_usage?: string
+  current_model?: {
     name: string
     provider: string
     model_id: string
     api_key_set: boolean
   }
-  embedding_model: {
+  // 保持與後端兼容的別名
+  user_ai_model?: {
     name: string
     provider: string
-    description: string
+    has_api_key: boolean
   }
 }
 
@@ -88,194 +81,115 @@ interface AIModel {
 interface UserModelPreference {
   id: number
   model_id: number
-  model_name: string
-  provider: string
   api_key_set: boolean
   is_default: boolean
   created_at: string
-}
-
-interface CreateModelForm {
-  name: string
-  provider: string
-  model_id: string
-  api_base_url: string
-  description: string
+  model: AIModel
 }
 
 export const SystemSettings: React.FC = () => {
   const { token } = useAuth()
+  const [activeTab, setActiveTab] = useState("status")
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [lastChecked, setLastChecked] = useState<Date | null>(null)
-  
-  // AI 模型相關狀態
-  const [availableModels, setAvailableModels] = useState<AIModel[]>([])
+  const [models, setModels] = useState<AIModel[]>([])
   const [userPreferences, setUserPreferences] = useState<UserModelPreference[]>([])
-  const [isCreateModelOpen, setIsCreateModelOpen] = useState(false)
-  const [isPreferenceDialogOpen, setIsPreferenceDialogOpen] = useState(false)
-  const [selectedModel, setSelectedModel] = useState<AIModel | null>(null)
-  const [showApiKey, setShowApiKey] = useState(false)
-  
-  // 表單狀態
-  const [createModelForm, setCreateModelForm] = useState<CreateModelForm>({
-    name: '',
-    provider: '',
-    model_id: '',
-    api_base_url: '',
-    description: ''
+  const [isAddModelOpen, setIsAddModelOpen] = useState(false)
+  const [isEditPreferenceOpen, setIsEditPreferenceOpen] = useState(false)
+  const [selectedPreference, setSelectedPreference] = useState<UserModelPreference | null>(null)
+  const [newModel, setNewModel] = useState({
+    name: "",
+    provider: "",
+    api_url: "",
+    description: ""
   })
-  
-  const [preferenceForm, setPreferenceForm] = useState({
-    api_key: '',
+  const [editingPreference, setEditingPreference] = useState({
+    model_id: 0,
+    api_key: "",
     is_default: false
   })
 
-  // 檢查系統狀態
-  const checkSystemStatus = async () => {
-    setIsLoading(true)
-    const startTime = Date.now()
-    
+  useEffect(() => {
+    fetchSystemInfo()
+    fetchModels()
+    fetchUserPreferences()
+  }, [])
+
+  const fetchSystemInfo = async () => {
+    if (!token) return
     try {
-      // 檢查 API 健康狀態
-      const healthResponse = await fetch(`${API_BASE_URL}/health`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      const response = await fetch(`${API_BASE_URL}/status`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       })
-      
-      const responseTime = Date.now() - startTime
-      
-      if (!healthResponse.ok) {
-        throw new Error('API 連接失敗')
+      if (response.ok) {
+        const data = await response.json()
+        setSystemInfo(data)
       }
-      
-      // 獲取系統狀態
-      const statusResponse = await fetch(`${API_BASE_URL}/status`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      })
-      
-      if (!statusResponse.ok) {
-        throw new Error('無法獲取系統狀態')
-      }
-      
-      const statusData = await statusResponse.json()
-      
-      setSystemInfo({
-        api_status: 'connected',
-        response_time: responseTime,
-        documents_count: statusData.documents_count || 0,
-        index_size: statusData.index_size || 0,
-        memory_usage: statusData.memory_usage || 'N/A',
-        cpu_usage: statusData.cpu_usage || 'N/A',
-        uptime: calculateUptime(),
-        current_model: statusData.current_model || {
-          name: 'DeepSeek Chat',
-          provider: 'deepseek',
-          model_id: 'deepseek-chat',
-          api_key_set: false
-        },
-        embedding_model: statusData.embedding_model || {
-          name: 'BAAI/bge-base-zh',
-          provider: 'huggingface',
-          description: '向量化文檔'
-        }
-      })
-      
-      setLastChecked(new Date())
-      
     } catch (error) {
-      console.error('系統狀態檢查失敗:', error)
-      setSystemInfo({
-        api_status: 'error',
-        response_time: Date.now() - startTime,
-        documents_count: 0,
-        index_size: 0,
-        memory_usage: 'N/A',
-        cpu_usage: 'N/A',
-        uptime: 'N/A',
-        current_model: {
-          name: 'DeepSeek Chat',
-          provider: 'deepseek',
-          model_id: 'deepseek-chat',
-          api_key_set: false
-        },
-        embedding_model: {
-          name: 'BAAI/bge-base-zh',
-          provider: 'huggingface',
-          description: '向量化文檔'
-        }
+      console.error("Failed to fetch system info:", error)
+    }
+  }
+
+  const fetchModels = async () => {
+    if (!token) return
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai-models`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       })
+      if (response.ok) {
+        const data = await response.json()
+        setModels(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch models:", error)
+    }
+  }
+
+  const fetchUserPreferences = async () => {
+    if (!token) return
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/model-preferences`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setUserPreferences(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch user preferences:", error)
+    }
+  }
+
+  const handleAddModel = async () => {
+    if (!token || !newModel.name || !newModel.provider || !newModel.api_url) return
+    
+    setIsLoading(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai-models/custom`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newModel)
+      })
+      
+      if (response.ok) {
+        setIsAddModelOpen(false)
+        setNewModel({ name: "", provider: "", api_url: "", description: "" })
+        fetchModels()
+      }
+    } catch (error) {
+      console.error("Failed to add model:", error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  // 載入可用模型
-  const loadAvailableModels = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/ai-models`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      })
-      
-      if (response.ok) {
-        const models = await response.json()
-        setAvailableModels(models)
-      }
-    } catch (error) {
-      console.error('載入模型失敗:', error)
-    }
-  }
-
-  // 載入用戶偏好
-  const loadUserPreferences = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/user/model-preferences`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      })
-      
-      if (response.ok) {
-        const preferences = await response.json()
-        setUserPreferences(preferences)
-      }
-    } catch (error) {
-      console.error('載入用戶偏好失敗:', error)
-    }
-  }
-
-  // 創建自定義模型
-  const handleCreateModel = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/ai-models/custom`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(createModelForm)
-      })
-      
-      if (response.ok) {
-        setIsCreateModelOpen(false)
-        setCreateModelForm({
-          name: '',
-          provider: '',
-          model_id: '',
-          api_base_url: '',
-          description: ''
-        })
-        await loadAvailableModels()
-      } else {
-        alert('創建模型失敗')
-      }
-    } catch (error) {
-      console.error('創建模型失敗:', error)
-      alert('創建模型失敗')
-    }
-  }
-
-  // 刪除自定義模型
   const handleDeleteModel = async (modelId: number) => {
-    if (!confirm('確定要刪除這個模型嗎？')) return
+    if (!token || !confirm('確定要刪除這個模型嗎？')) return
     
+    setIsLoading(true)
     try {
       const response = await fetch(`${API_BASE_URL}/ai-models/custom/${modelId}`, {
         method: 'DELETE',
@@ -283,556 +197,525 @@ export const SystemSettings: React.FC = () => {
       })
       
       if (response.ok) {
-        await loadAvailableModels()
-        await loadUserPreferences()
-      } else {
-        alert('刪除模型失敗')
+        fetchModels()
+        fetchUserPreferences()
       }
     } catch (error) {
-      console.error('刪除模型失敗:', error)
-      alert('刪除模型失敗')
+      console.error("Failed to delete model:", error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  // 設定模型偏好
-  const handleSetPreference = async () => {
-    if (!selectedModel) return
+  const handleAddPreference = async (modelId: number) => {
+    setEditingPreference({ model_id: modelId, api_key: "", is_default: false })
+    setSelectedPreference(null)
+    setIsEditPreferenceOpen(true)
+  }
+
+  const handleEditPreference = (preference: UserModelPreference) => {
+    setEditingPreference({
+      model_id: preference.model_id,
+      api_key: "", // api_key不在返回數據中，重置為空
+      is_default: preference.is_default
+    })
+    setSelectedPreference(preference)
+    setIsEditPreferenceOpen(true)
+  }
+
+  const handleSavePreference = async () => {
+    if (!token || !editingPreference.model_id) return
     
+    setIsLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/user/model-preferences`, {
-        method: 'POST',
+      const method = selectedPreference ? 'PUT' : 'POST'
+      const url = selectedPreference 
+        ? `${API_BASE_URL}/user/model-preferences/${selectedPreference.id}`
+        : `${API_BASE_URL}/user/model-preferences`
+      
+      const response = await fetch(url, {
+        method,
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          model_id: selectedModel.id,
-          api_key: preferenceForm.api_key || null,
-          is_default: preferenceForm.is_default
-        })
+        body: JSON.stringify(editingPreference)
       })
       
       if (response.ok) {
-        setIsPreferenceDialogOpen(false)
-        setPreferenceForm({ api_key: '', is_default: false })
-        setSelectedModel(null)
-        await loadUserPreferences()
-      } else {
-        alert('設定偏好失敗')
+        setIsEditPreferenceOpen(false)
+        fetchUserPreferences()
+        fetchSystemInfo()
       }
     } catch (error) {
-      console.error('設定偏好失敗:', error)
-      alert('設定偏好失敗')
+      console.error("Failed to save preference:", error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  // 刪除用戶偏好
-  const handleDeletePreference = async (modelId: number) => {
-    if (!confirm('確定要移除這個模型偏好嗎？')) return
+  const handleDeletePreference = async (preferenceId: number) => {
+    if (!token || !confirm('確定要刪除這個偏好設定嗎？')) return
     
+    setIsLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/user/model-preferences/${modelId}`, {
+      const response = await fetch(`${API_BASE_URL}/user/model-preferences/${preferenceId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
       
       if (response.ok) {
-        await loadUserPreferences()
-      } else {
-        alert('移除偏好失敗')
+        fetchUserPreferences()
+        fetchSystemInfo()
       }
     } catch (error) {
-      console.error('移除偏好失敗:', error)
-      alert('移除偏好失敗')
+      console.error("Failed to delete preference:", error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  // 計算運行時間（模擬）
-  const calculateUptime = () => {
-    const now = new Date()
-    const hours = now.getHours()
-    const minutes = now.getMinutes()
-    return `${hours}h ${minutes}m`
-  }
-
-  // 組件載入時檢查狀態
-  useEffect(() => {
-    if (token) {
-      checkSystemStatus()
-      loadAvailableModels()
-      loadUserPreferences()
-    }
-  }, [token])
-
-  // 格式化數字
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('zh-TW').format(num)
-  }
-
-  // 獲取狀態顏色
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'connected': return 'text-green-600'
-      case 'disconnected': return 'text-yellow-600'
-      case 'error': return 'text-red-600'
-      default: return 'text-gray-600'
-    }
-  }
-
-  // 獲取狀態圖標
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'connected': return <CheckCircle className="h-4 w-4" />
-      case 'disconnected': return <AlertTriangle className="h-4 w-4" />
-      case 'error': return <XCircle className="h-4 w-4" />
-      default: return <Clock className="h-4 w-4" />
-    }
+  const handleRefresh = () => {
+    fetchSystemInfo()
+    fetchModels()
+    fetchUserPreferences()
   }
 
   return (
     <div className="space-y-6">
-      {/* 頁面標題 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Settings className="w-5 h-5 mr-2" />
-            系統設定與監控
-          </CardTitle>
-          <CardDescription>
-            查看系統狀態、AI 模型配置和性能監控
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex justify-center mb-6">
+          <TabsList className="grid grid-cols-3 clay-nav p-2 rounded-2xl">
+            <TabsTrigger 
+              value="status"
+              className={`transition-all duration-300 rounded-xl ${
+                activeTab === "status" ? "clay-tab-active" : "clay-tab"
+              }`}
+            >
+              <Activity className="w-4 h-4 mr-2" />
+              系統狀態
+            </TabsTrigger>
+            <TabsTrigger 
+              value="models"
+              className={`transition-all duration-300 rounded-xl ${
+                activeTab === "models" ? "clay-tab-active" : "clay-tab"
+              }`}
+            >
+              <Brain className="w-4 h-4 mr-2" />
+              AI 模型管理
+            </TabsTrigger>
+            <TabsTrigger 
+              value="preferences"
+              className={`transition-all duration-300 rounded-xl ${
+                activeTab === "preferences" ? "clay-tab-active" : "clay-tab"
+              }`}
+            >
+              <User className="w-4 h-4 mr-2" />
+              我的模型偏好
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-      <Tabs defaultValue="status" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="status">系統狀態</TabsTrigger>
-          <TabsTrigger value="models">AI 模型管理</TabsTrigger>
-          <TabsTrigger value="preferences">我的模型偏好</TabsTrigger>
-        </TabsList>
-
-        {/* 系統狀態頁籤 */}
-        <TabsContent value="status" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center">
-                  <Activity className="w-5 h-5 mr-2" />
-                  系統狀態
-                </CardTitle>
-                <CardDescription>
-                  {lastChecked ? `最後更新: ${lastChecked.toLocaleTimeString('zh-TW')}` : '正在載入...'}
-                </CardDescription>
+        {/* 系統狀態 */}
+        <TabsContent value="status" className="space-y-6">
+          <div className="clay-card">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <Activity className="w-6 h-6 mr-3 text-orange-500" />
+                  <h2 className="text-2xl font-semibold">系統狀態監控</h2>
+                </div>
+                <Button onClick={handleRefresh} className="clay-button" data-clay="true">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  刷新
+                </Button>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={checkSystemStatus}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                刷新狀態
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {systemInfo ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* API 連接狀態 */}
-                  <div className="flex items-center space-x-3">
-                    <div className={`${getStatusColor(systemInfo.api_status)}`}>
-                      {getStatusIcon(systemInfo.api_status)}
+              
+              {systemInfo && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* API 狀態 */}
+                  <div className="clay-card p-6 clay-animate-float">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <Server className="w-5 h-5 mr-2 text-green-500" />
+                        <span className="font-semibold">API 連接</span>
+                      </div>
+                      <div className="clay-badge">
+                        <Check className="w-3 h-3 mr-1" />
+                        正常
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">API 連接</p>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {systemInfo.api_status === 'connected' ? '已連接' : 
-                         systemInfo.api_status === 'error' ? '連接錯誤' : '未連接'}
-                      </p>
+                    <div className="text-2xl font-bold text-green-500 mb-1">
+                      {systemInfo.api_response_time || '<100'}ms
                     </div>
-                  </div>
-
-                  {/* 響應時間 */}
-                  <div className="flex items-center space-x-3">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <p className="text-sm font-medium">響應時間</p>
-                      <p className="text-xs text-muted-foreground">{systemInfo.response_time}ms</p>
-                    </div>
+                    <div className="text-sm text-muted-foreground">響應時間</div>
                   </div>
 
                   {/* 文檔數量 */}
-                  <div className="flex items-center space-x-3">
-                    <Database className="h-4 w-4 text-purple-600" />
-                    <div>
-                      <p className="text-sm font-medium">文檔數量</p>
-                      <p className="text-xs text-muted-foreground">{formatNumber(systemInfo.documents_count)}</p>
+                  <div className="clay-card p-6 clay-animate-float" style={{animationDelay: '0.1s'}}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <Zap className="w-5 h-5 mr-2 text-blue-500" />
+                        <span className="font-semibold">知識庫</span>
+                      </div>
+                      <div className="clay-badge">
+                        活躍
+                      </div>
                     </div>
+                    <div className="text-2xl font-bold text-blue-500 mb-1">
+                      {systemInfo.documents_count}
+                    </div>
+                    <div className="text-sm text-muted-foreground">個文檔</div>
                   </div>
 
-                  {/* 索引大小 */}
-                  <div className="flex items-center space-x-3">
-                    <HardDrive className="h-4 w-4 text-orange-600" />
-                    <div>
-                      <p className="text-sm font-medium">索引大小</p>
-                      <p className="text-xs text-muted-foreground">{formatNumber(systemInfo.index_size)}</p>
+                  {/* AI 模型狀態 */}
+                  <div className="clay-card p-6 clay-animate-float" style={{animationDelay: '0.2s'}}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <Brain className="w-5 h-5 mr-2 text-purple-500" />
+                        <span className="font-semibold">AI 模型</span>
+                      </div>
+                      <div className={`clay-badge ${
+                        (systemInfo.current_model?.api_key_set || systemInfo.user_ai_model?.has_api_key) 
+                          ? '' : 'bg-yellow-500'
+                      }`}>
+                        {(systemInfo.current_model?.api_key_set || systemInfo.user_ai_model?.has_api_key) 
+                          ? '已配置' : '需配置'}
+                      </div>
+                    </div>
+                    <div className="text-lg font-bold text-purple-500 mb-1">
+                      {systemInfo.current_model?.name || systemInfo.user_ai_model?.name || '未設定'}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {systemInfo.current_model?.provider || systemInfo.user_ai_model?.provider || '無提供商'}
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-32">
-                  <RefreshCw className="w-6 h-6 animate-spin mr-2" />
-                  <span>正在載入系統狀態...</span>
                 </div>
               )}
-            </CardContent>
-          </Card>
 
-          {/* AI 模型配置 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Zap className="w-5 h-5 mr-2" />
-                AI 模型配置
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">語言模型</Label>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="secondary">{systemInfo?.current_model?.name || 'DeepSeek Chat'}</Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {systemInfo?.current_model?.provider || 'deepseek'} • 
-                      {systemInfo?.current_model?.api_key_set ? ' API 已設定' : ' API 未設定'}
-                    </span>
+              {/* 系統信息 */}
+              <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="clay-card p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center">
+                    <Settings className="w-5 h-5 mr-2 text-orange-500" />
+                    連接設定
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">後端 API:</span>
+                      <span className="font-mono text-sm clay-secondary-badge">{API_BASE_URL}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">前端 URL:</span>
+                      <span className="font-mono text-sm clay-secondary-badge">
+                        {typeof window !== 'undefined' ? window.location.origin : 'localhost:3001'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">嵌入模型</Label>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="secondary">{systemInfo?.embedding_model?.name || 'BAAI/bge-base-zh'}</Badge>
-                    <span className="text-xs text-muted-foreground">{systemInfo?.embedding_model?.description || '向量化文檔'}</span>
+
+                <div className="clay-card p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center">
+                    <Activity className="w-5 h-5 mr-2 text-green-500" />
+                    性能指標
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">記憶體使用:</span>
+                      <span className="clay-secondary-badge">
+                        {systemInfo?.memory_usage || 'N/A'}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">CPU 使用:</span>
+                      <span className="clay-secondary-badge">
+                        {systemInfo?.cpu_usage || 'N/A'}%
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* 性能監控 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="w-5 h-5 mr-2" />
-                性能監控
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">記憶體使用</Label>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline">{systemInfo?.memory_usage || 'N/A'}</Badge>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">CPU 使用率</Label>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline">{systemInfo?.cpu_usage || 'N/A'}</Badge>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">運行時間</Label>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline">{systemInfo?.uptime || 'N/A'}</Badge>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 連接設定 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Wifi className="w-5 h-5 mr-2" />
-                連接設定
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">前端 URL</Label>
-                  <div className="p-2 bg-muted rounded-md">
-                    <code className="text-xs">{typeof window !== 'undefined' ? window.location.origin : 'N/A'}</code>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">後端 API URL</Label>
-                  <div className="p-2 bg-muted rounded-md">
-                    <code className="text-xs">{API_BASE_URL}</code>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
-        {/* AI 模型管理頁籤 */}
-        <TabsContent value="models" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>可用的 AI 模型</CardTitle>
-                <CardDescription>管理系統中可用的 AI 模型</CardDescription>
-              </div>
-              <Dialog open={isCreateModelOpen} onOpenChange={setIsCreateModelOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    新增模型
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[525px]">
-                  <DialogHeader>
-                    <DialogTitle>新增自定義 AI 模型</DialogTitle>
-                    <DialogDescription>
-                      添加您自己的 AI 模型配置
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="name" className="text-right">
-                        模型名稱
-                      </Label>
-                      <Input
-                        id="name"
-                        value={createModelForm.name}
-                        onChange={(e) => setCreateModelForm({...createModelForm, name: e.target.value})}
-                        className="col-span-3"
-                        placeholder="例如: GPT-4"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="provider" className="text-right">
-                        提供商
-                      </Label>
-                      <Input
-                        id="provider"
-                        value={createModelForm.provider}
-                        onChange={(e) => setCreateModelForm({...createModelForm, provider: e.target.value})}
-                        className="col-span-3"
-                        placeholder="例如: openai"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="model_id" className="text-right">
-                        模型 ID
-                      </Label>
-                      <Input
-                        id="model_id"
-                        value={createModelForm.model_id}
-                        onChange={(e) => setCreateModelForm({...createModelForm, model_id: e.target.value})}
-                        className="col-span-3"
-                        placeholder="例如: gpt-4"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="api_base_url" className="text-right">
-                        API URL
-                      </Label>
-                      <Input
-                        id="api_base_url"
-                        value={createModelForm.api_base_url}
-                        onChange={(e) => setCreateModelForm({...createModelForm, api_base_url: e.target.value})}
-                        className="col-span-3"
-                        placeholder="例如: https://api.openai.com/v1"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="description" className="text-right">
-                        描述
-                      </Label>
-                      <Textarea
-                        id="description"
-                        value={createModelForm.description}
-                        onChange={(e) => setCreateModelForm({...createModelForm, description: e.target.value})}
-                        className="col-span-3"
-                        placeholder="模型描述..."
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" onClick={handleCreateModel}>新增模型</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {availableModels.map((model) => (
-                  <div key={model.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-medium">{model.name}</h3>
-                        {model.is_built_in && <Badge variant="secondary">內建</Badge>}
-                        {!model.is_active && <Badge variant="destructive">停用</Badge>}
+        {/* AI 模型管理 */}
+        <TabsContent value="models" className="space-y-6">
+          <div className="clay-card">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <Brain className="w-6 h-6 mr-3 text-orange-500" />
+                  <h2 className="text-2xl font-semibold">AI 模型管理</h2>
+                </div>
+                <Dialog open={isAddModelOpen} onOpenChange={setIsAddModelOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="clay-button" data-clay="true">
+                      <Plus className="w-4 h-4 mr-2" />
+                      新增自定義模型
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="clay-dialog-content">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-bold text-gray-800">新增自定義 AI 模型</DialogTitle>
+                      <DialogDescription className="text-muted-foreground">
+                        添加您自己的 AI 模型配置
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 p-1">
+                      <div>
+                        <Label htmlFor="model-name" className="text-sm font-medium">模型名稱</Label>
+                        <Input
+                          id="model-name"
+                          value={newModel.name}
+                          onChange={(e) => setNewModel(prev => ({...prev, name: e.target.value}))}
+                          placeholder="例如: GPT-4o"
+                          className="clay-input mt-1"
+                        />
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {model.provider} • {model.model_id}
-                      </p>
-                      {model.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{model.description}</p>
-                      )}
-                      {model.created_by_username && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          由 {model.created_by_username} 創建
-                        </p>
-                      )}
+                      <div>
+                        <Label htmlFor="model-provider" className="text-sm font-medium">提供商</Label>
+                        <Input
+                          id="model-provider"
+                          value={newModel.provider}
+                          onChange={(e) => setNewModel(prev => ({...prev, provider: e.target.value}))}
+                          placeholder="例如: OpenAI"
+                          className="clay-input mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="model-url" className="text-sm font-medium">API URL</Label>
+                        <Input
+                          id="model-url"
+                          value={newModel.api_url}
+                          onChange={(e) => setNewModel(prev => ({...prev, api_url: e.target.value}))}
+                          placeholder="例如: https://api.openai.com/v1/chat/completions"
+                          className="clay-input mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="model-description" className="text-sm font-medium">描述</Label>
+                        <Textarea
+                          id="model-description"
+                          value={newModel.description}
+                          onChange={(e) => setNewModel(prev => ({...prev, description: e.target.value}))}
+                          placeholder="模型描述..."
+                          className="clay-input mt-1"
+                          rows={3}
+                        />
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
+                    <DialogFooter className="flex space-x-2 pt-4">
+                      <Button 
+                        onClick={() => setIsAddModelOpen(false)} 
                         variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedModel(model)
-                          setIsPreferenceDialogOpen(true)
-                        }}
+                        className="clay-button bg-gray-200 hover:bg-gray-300 text-gray-700"
                       >
-                        設定偏好
+                        取消
                       </Button>
-                      {!model.is_built_in && (
+                      <Button 
+                        onClick={handleAddModel} 
+                        disabled={isLoading} 
+                        className="clay-button" 
+                        data-clay="true"
+                      >
+                        {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        新增
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {models.map((model) => (
+                  <div key={model.id} className="clay-card p-5 transition-all duration-300 hover:scale-[1.02]">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold text-lg">{model.name}</h3>
+                        <p className="text-sm text-muted-foreground">{model.provider}</p>
+                      </div>
+                      {model.is_built_in ? (
+                        <div className="clay-badge">內建</div>
+                      ) : (
                         <Button
-                          variant="destructive"
                           size="sm"
+                          variant="outline"
                           onClick={() => handleDeleteModel(model.id)}
+                          className="clay-button bg-red-500 hover:bg-red-600"
+                          data-clay="true"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       )}
                     </div>
+                    <p className="text-sm text-muted-foreground mb-4">{model.description}</p>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddPreference(model.id)}
+                      className="w-full clay-button"
+                      data-clay="true"
+                    >
+                      設定偏好
+                    </Button>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
-        {/* 我的模型偏好頁籤 */}
-        <TabsContent value="preferences" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>我的模型偏好</CardTitle>
-              <CardDescription>管理您配置的 AI 模型和 API 密鑰</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {userPreferences.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>您尚未配置任何模型偏好</p>
-                    <p className="text-sm">請到「AI 模型管理」頁籤新增模型配置</p>
-                  </div>
-                ) : (
-                  userPreferences.map((pref) => (
-                    <div key={pref.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-medium">{pref.model_name}</h3>
-                          {pref.is_default && (
-                            <Badge variant="default">
-                              <Star className="w-3 h-3 mr-1" />
-                              預設
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {pref.provider} • API 密鑰: {pref.api_key_set ? '已設定' : '未設定'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          配置時間: {new Date(pref.created_at).toLocaleString('zh-TW')}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const model = availableModels.find(m => m.id === pref.model_id)
-                            if (model) {
-                              setSelectedModel(model)
-                              setPreferenceForm({
-                                api_key: '',
-                                is_default: pref.is_default
-                              })
-                              setIsPreferenceDialogOpen(true)
-                            }
-                          }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeletePreference(pref.model_id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
+        {/* 我的模型偏好 */}
+        <TabsContent value="preferences" className="space-y-6">
+          <div className="clay-card">
+            <div className="p-6">
+              <div className="flex items-center mb-6">
+                <User className="w-6 h-6 mr-3 text-orange-500" />
+                <h2 className="text-2xl font-semibold">我的模型偏好</h2>
               </div>
-            </CardContent>
-          </Card>
+
+              {userPreferences.length > 0 ? (
+                <div className="space-y-4">
+                  {userPreferences.map((preference) => {
+                    // 安全檢查：確保 model 存在
+                    if (!preference.model) {
+                      return (
+                        <div key={preference.id} className="clay-card p-5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="p-3 rounded-xl bg-gradient-to-r from-red-100 to-red-200">
+                                <AlertCircle className="w-6 h-6 text-red-600" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-lg text-red-600">模型數據錯誤</h3>
+                                <p className="text-sm text-muted-foreground">無法載入模型信息</p>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeletePreference(preference.id)}
+                              className="clay-button bg-red-500 hover:bg-red-600"
+                              data-clay="true"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )
+                    }
+                    
+                    return (
+                      <div key={preference.id} className="clay-card p-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-3 rounded-xl bg-gradient-to-r from-orange-100 to-orange-200">
+                              <Brain className="w-6 h-6 text-orange-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-lg">{preference.model.name || '未知模型'}</h3>
+                              <p className="text-sm text-muted-foreground">{preference.model.provider || '未知提供商'}</p>
+                              <div className="flex items-center space-x-2 mt-1">
+                                {preference.is_default && (
+                                  <div className="clay-badge">
+                                    <Check className="w-3 h-3 mr-1" />
+                                    默認
+                                  </div>
+                                )}
+                                <div className={`clay-secondary-badge ${preference.api_key_set ? 'text-green-600' : 'text-yellow-600'}`}>
+                                  {preference.api_key_set ? 'API 已配置' : 'API 待配置'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleEditPreference(preference)}
+                              className="clay-button"
+                              data-clay="true"
+                            >
+                              編輯
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeletePreference(preference.id)}
+                              className="clay-button bg-red-500 hover:bg-red-600"
+                              data-clay="true"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 clay-card">
+                  <div className="p-4 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                    <Brain className="w-10 h-10 text-orange-500" />
+                  </div>
+                  <p className="text-lg font-medium text-gray-700 mb-2">還沒有配置任何模型偏好</p>
+                  <p className="text-muted-foreground">到「AI 模型管理」頁面設定您喜愛的模型</p>
+                </div>
+              )}
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
-      {/* 設定模型偏好對話框 */}
-      <Dialog open={isPreferenceDialogOpen} onOpenChange={setIsPreferenceDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      {/* 編輯偏好對話框 */}
+      <Dialog open={isEditPreferenceOpen} onOpenChange={setIsEditPreferenceOpen}>
+        <DialogContent className="clay-dialog-content">
           <DialogHeader>
-            <DialogTitle>設定模型偏好</DialogTitle>
-            <DialogDescription>
-              為 {selectedModel?.name} 配置 API 密鑰和偏好設定
+            <DialogTitle className="text-xl font-bold text-gray-800">
+              {selectedPreference ? '編輯模型偏好' : '新增模型偏好'}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              配置您的 AI 模型 API 密鑰和偏好設定
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="api_key">API 密鑰</Label>
-              <div className="relative">
-                <Input
-                  id="api_key"
-                  type={showApiKey ? "text" : "password"}
-                  value={preferenceForm.api_key}
-                  onChange={(e) => setPreferenceForm({...preferenceForm, api_key: e.target.value})}
-                  placeholder="輸入您的 API 密鑰"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                >
-                  {showApiKey ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+          <div className="space-y-4 p-1">
+            <div>
+              <Label htmlFor="api-key" className="text-sm font-medium">API 密鑰</Label>
+              <Input
+                id="api-key"
+                type="password"
+                value={editingPreference.api_key}
+                onChange={(e) => setEditingPreference(prev => ({...prev, api_key: e.target.value}))}
+                placeholder="輸入您的 API 密鑰..."
+                className="clay-input mt-1"
+              />
             </div>
             <div className="flex items-center space-x-2">
-              <Switch
-                id="is_default"
-                checked={preferenceForm.is_default}
-                onCheckedChange={(checked) => setPreferenceForm({...preferenceForm, is_default: checked})}
+              <input
+                id="is-default"
+                type="checkbox"
+                checked={editingPreference.is_default}
+                onChange={(e) => setEditingPreference(prev => ({...prev, is_default: e.target.checked}))}
+                className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
               />
-              <Label htmlFor="is_default">設為預設模型</Label>
+              <Label htmlFor="is-default" className="text-sm font-medium">設為默認模型</Label>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="submit" onClick={handleSetPreference}>
-              儲存設定
+          <DialogFooter className="flex space-x-2 pt-4">
+            <Button 
+              onClick={() => setIsEditPreferenceOpen(false)} 
+              variant="outline"
+              className="clay-button bg-gray-200 hover:bg-gray-300 text-gray-700"
+            >
+              取消
+            </Button>
+            <Button 
+              onClick={handleSavePreference} 
+              disabled={isLoading} 
+              className="clay-button" 
+              data-clay="true"
+            >
+              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              保存
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -170,6 +170,19 @@ export const KnowledgeBaseDashboard: React.FC = () => {
     const files = event.target.files
     if (!files || files.length === 0 || !token) return
 
+    // 檢查文件大小限制 (500MB)
+    const maxSize = 500 * 1024 * 1024 // 500MB in bytes
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (file.size > maxSize) {
+        alert(`文件 "${file.name}" 大小超過 500MB 限制，請選擇較小的文件。`)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+        return
+      }
+    }
+
     setIsLoading(true)
     
     try {
@@ -289,195 +302,245 @@ export const KnowledgeBaseDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-4 space-y-6">
+    <div className="min-h-screen">
+      <div className="responsive-container space-y-8 py-8">
         {/* 頂部導航 */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">個人知識庫</h1>
-            <p className="text-muted-foreground">
-              歡迎回來，{user.full_name || user.username}！
-            </p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Badge variant="outline" className="flex items-center space-x-1">
-              <User className="w-3 h-3" />
-              <span>{user.username}</span>
-            </Badge>
-            <UserDropdown />
+        <div className="clay-nav rounded-3xl p-6 clay-animate-float">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
+                個人知識庫
+              </h1>
+              <p className="text-muted-foreground mt-2 text-lg">
+                歡迎回來，{user.full_name || user.username}！✨
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="clay-secondary-badge">
+                <User className="w-4 h-4 mr-2" />
+                <span>{user.username}</span>
+              </div>
+              <UserDropdown />
+            </div>
           </div>
         </div>
 
         {/* 系統狀態 */}
         {systemStatus && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Database className="w-5 h-5 mr-2" />
-                系統狀態
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
+          <div className="clay-card clay-animate-glow">
+            <div className="p-6">
+              <div className="flex items-center mb-6">
+                <Database className="w-6 h-6 mr-3 text-orange-500" />
+                <h2 className="text-2xl font-semibold">系統狀態</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center clay-card p-4">
+                  <div className="text-3xl font-bold text-orange-500 mb-2">
                     {systemStatus.documents_count}
                   </div>
                   <div className="text-sm text-muted-foreground">我的文檔</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
+                <div className="text-center clay-card p-4">
+                  <div className="text-3xl font-bold text-blue-500 mb-2">
                     {systemStatus.model_status}
                   </div>
                   <div className="text-sm text-muted-foreground">模型狀態</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
+                <div className="text-center clay-card p-4">
+                  <div className="text-3xl font-bold text-green-500 mb-2">
                     {systemStatus.status}
                   </div>
                   <div className="text-sm text-muted-foreground">系統狀態</div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* 主要功能區域 */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="query">智能問答</TabsTrigger>
-            <TabsTrigger value="upload">文檔管理</TabsTrigger>
-            <TabsTrigger value="settings">系統設定</TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="flex justify-center">
+            <TabsList className="grid grid-cols-3 clay-nav p-2 rounded-2xl">
+              <TabsTrigger 
+                value="query" 
+                className={`transition-all duration-300 rounded-xl ${
+                  activeTab === "query" ? "clay-tab-active" : "clay-tab"
+                }`}
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                智能問答
+              </TabsTrigger>
+              <TabsTrigger 
+                value="upload"
+                className={`transition-all duration-300 rounded-xl ${
+                  activeTab === "upload" ? "clay-tab-active" : "clay-tab"
+                }`}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                文檔管理
+              </TabsTrigger>
+              <TabsTrigger 
+                value="settings"
+                className={`transition-all duration-300 rounded-xl ${
+                  activeTab === "settings" ? "clay-tab-active" : "clay-tab"
+                }`}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                系統設定
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* 智能問答 */}
-          <TabsContent value="query" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MessageSquare className="w-5 h-5 mr-2" />
-                  智能問答
-                </CardTitle>
-                <CardDescription>
-                  基於您上傳的文檔進行智能問答
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="query">問題</Label>
-                  <Textarea
-                    id="query"
-                    placeholder="請輸入您的問題..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    rows={3}
-                    disabled={isLoading}
-                  />
-                </div>
-                <Button 
-                  onClick={handleQuery} 
-                  disabled={isLoading || !query.trim()}
-                  className="w-full"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      查詢中{loadingDots}
-                    </>
-                  ) : (
-                    <>
-                      <Search className="mr-2 h-4 w-4" />
-                      開始查詢
-                    </>
-                  )}
-                </Button>
-                
-                {response && (
-                  <div className="space-y-2">
-                    <Label>回答</Label>
-                    <div className="p-4 bg-muted rounded-lg whitespace-pre-wrap">
-                      {response}
-                    </div>
+          <TabsContent value="query" className="space-y-6">
+            <div className="clay-card">
+              <div className="p-6">
+                <div className="flex items-center mb-6">
+                  <MessageSquare className="w-6 h-6 mr-3 text-orange-500" />
+                  <div>
+                    <h2 className="text-2xl font-semibold">智能問答</h2>
+                    <p className="text-muted-foreground mt-1">
+                      基於您上傳的文檔進行智能問答
+                    </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="query" className="text-lg font-medium">問題</Label>
+                    <Textarea
+                      id="query"
+                      placeholder="請輸入您的問題..."
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      rows={4}
+                      disabled={isLoading}
+                      className="clay-input"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleQuery} 
+                    disabled={isLoading || !query.trim()}
+                    className="w-full clay-button py-3 text-lg"
+                    data-clay="true"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        查詢中{loadingDots}
+                      </>
+                    ) : (
+                      <>
+                        <Search className="mr-2 h-5 w-5" />
+                        開始查詢
+                      </>
+                    )}
+                  </Button>
+                  
+                  {response && (
+                    <div className="space-y-2">
+                      <Label className="text-lg font-medium">回答</Label>
+                      <div className="clay-card p-6 whitespace-pre-wrap text-gray-700 leading-relaxed">
+                        {response}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           {/* 文檔管理 */}
-          <TabsContent value="upload" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Upload className="w-5 h-5 mr-2" />
-                  文檔管理
-                </CardTitle>
-                <CardDescription>
-                  上傳和管理您的個人文檔
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="file-upload">上傳文檔</Label>
-                  <Input
-                    id="file-upload"
-                    type="file"
-                    multiple
-                    accept=".txt,.md,.pdf,.docx"
-                    onChange={handleFileUpload}
-                    ref={fileInputRef}
-                    disabled={isLoading}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    支持 TXT、MD、PDF、DOCX 格式
-                  </p>
+          <TabsContent value="upload" className="space-y-6">
+            <div className="clay-card">
+              <div className="p-6">
+                <div className="flex items-center mb-6">
+                  <Upload className="w-6 h-6 mr-3 text-orange-500" />
+                  <div>
+                    <h2 className="text-2xl font-semibold">文檔管理</h2>
+                    <p className="text-muted-foreground mt-1">
+                      上傳和管理您的個人文檔
+                    </p>
+                  </div>
                 </div>
-
-                {uploadedFiles.length > 0 && (
+                
+                <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label>我的文檔 ({uploadedFiles.length})</Label>
-                    <div className="space-y-2">
-                      {uploadedFiles.map((file) => (
-                        <div
-                          key={file.id}
-                          className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <FileText className="w-4 h-4 text-muted-foreground" />
-                            <div>
-                              <div className="font-medium">{file.original_filename}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {formatFileSize(file.file_size)} • {formatDate(file.upload_time)}
+                    <Label htmlFor="file-upload" className="text-lg font-medium">上傳文檔</Label>
+                    <Input
+                      id="file-upload"
+                      type="file"
+                      multiple
+                      accept=".txt,.md,.pdf,.docx"
+                      onChange={handleFileUpload}
+                      ref={fileInputRef}
+                      disabled={isLoading}
+                      className="clay-input"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                                              支持 TXT、MD、PDF、DOCX 格式，最大檔案大小 500MB
+                    </p>
+                  </div>
+
+                  {uploadedFiles.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-lg font-medium">我的文檔</Label>
+                        <div className="clay-badge">
+                          {uploadedFiles.length} 個文檔
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        {uploadedFiles.map((file) => (
+                          <div
+                            key={file.id}
+                            className="clay-card p-4 transition-all duration-300 hover:scale-[1.02]"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className="p-2 rounded-xl bg-gradient-to-r from-orange-100 to-orange-200">
+                                  <FileText className="w-5 h-5 text-orange-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-800">{file.original_filename}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {formatFileSize(file.file_size)} • {formatDate(file.upload_time)}
+                                  </div>
+                                </div>
                               </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteDocument(file.id)}
+                                disabled={isLoading}
+                                className="clay-button bg-red-500 hover:bg-red-600 border-red-300"
+                                data-clay="true"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteDocument(file.id)}
-                            disabled={isLoading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {uploadedFiles.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>還沒有上傳任何文檔</p>
-                    <p className="text-sm">上傳文檔後即可開始智能問答</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  {uploadedFiles.length === 0 && (
+                    <div className="text-center py-12 clay-card">
+                      <div className="p-4 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                        <FileText className="w-10 h-10 text-orange-500" />
+                      </div>
+                      <p className="text-lg font-medium text-gray-700 mb-2">還沒有上傳任何文檔</p>
+                      <p className="text-muted-foreground">上傳文檔後即可開始智能問答</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           {/* 系統設定 */}
-          <TabsContent value="settings" className="space-y-4">
+          <TabsContent value="settings" className="space-y-6">
             <SystemSettings />
           </TabsContent>
         </Tabs>

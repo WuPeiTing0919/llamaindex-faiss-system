@@ -2,13 +2,162 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 自定義字體 */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  
+  /* Claymorphism 特效類 */
+  .clay-card {
+    @apply relative overflow-hidden;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 
+      0 8px 32px rgba(255, 156, 85, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(255, 156, 85, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .clay-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 12px 40px rgba(255, 156, 85, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -1px 0 rgba(255, 156, 85, 0.15);
+  }
+  
+  .clay-dialog {
+    @apply fixed inset-0 z-50 flex items-center justify-center;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+  }
+  
+  .clay-dialog-content {
+    @apply relative w-full max-w-lg mx-4;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95));
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 
+      0 20px 60px rgba(255, 156, 85, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      inset 0 -1px 0 rgba(255, 156, 85, 0.1);
+    backdrop-filter: blur(15px);
+    border-radius: 24px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: clay-dialog-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .clay-button {
+    @apply relative overflow-hidden font-medium transition-all duration-300;
+    background: linear-gradient(145deg, #ff9c55, #ff8a42);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 4px 16px rgba(255, 138, 66, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    color: white;
+  }
+  
+  .clay-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 
+      0 6px 20px rgba(255, 138, 66, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  }
+  
+  .clay-button:active {
+    transform: translateY(0);
+    box-shadow: 
+      0 2px 8px rgba(255, 138, 66, 0.3),
+      inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+  
+  .clay-input {
+    @apply transition-all duration-300;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+    border: 1px solid rgba(255, 156, 85, 0.2);
+    box-shadow: 
+      inset 0 2px 4px rgba(255, 156, 85, 0.1),
+      0 1px 0 rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+  }
+  
+  .clay-input:focus {
+    border-color: rgba(255, 138, 66, 0.4);
+    box-shadow: 
+      inset 0 2px 4px rgba(255, 156, 85, 0.15),
+      0 0 0 3px rgba(255, 138, 66, 0.1),
+      0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+  
+  .clay-badge {
+    @apply inline-flex items-center px-3 py-1 text-sm font-medium;
+    background: linear-gradient(145deg, rgba(255, 156, 85, 0.9), rgba(255, 138, 66, 0.8));
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 
+      0 2px 8px rgba(255, 138, 66, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    color: white;
+  }
+  
+  .clay-secondary-badge {
+    @apply inline-flex items-center px-3 py-1 text-sm font-medium;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.8));
+    border: 1px solid rgba(255, 156, 85, 0.2);
+    box-shadow: 
+      0 2px 8px rgba(255, 156, 85, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    border-radius: 12px;
+    color: #ff8a42;
+  }
+  
+  .clay-background {
+    background: linear-gradient(135deg, #fef7ed 0%, #fff7ed 25%, #ffedd5 50%, #fed7aa 75%, #fdba74 100%);
+    min-height: 100vh;
+  }
+  
+  .clay-nav {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+    border-bottom: 1px solid rgba(255, 156, 85, 0.1);
+    box-shadow: 
+      0 4px 20px rgba(255, 156, 85, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(15px);
+  }
+  
+  .clay-tab {
+    @apply relative overflow-hidden font-medium transition-all duration-300;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
+    border: 1px solid rgba(255, 156, 85, 0.2);
+    box-shadow: 
+      0 2px 8px rgba(255, 156, 85, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    color: #ff8a42;
+  }
+  
+  .clay-tab-active {
+    @apply relative overflow-hidden font-medium transition-all duration-300;
+    background: linear-gradient(145deg, #ff9c55, #ff8a42);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 4px 16px rgba(255, 138, 66, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    color: white;
   }
   
   /* 響應式設計輔助類 */
@@ -27,73 +176,76 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    /* Claymorphism 色彩方案 */
+    --background: 29 46% 97%;
+    --foreground: 20 14% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 20 14% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
+    --popover-foreground: 20 14% 20%;
+    --primary: 25 85% 60%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
+    --secondary: 29 45% 95%;
+    --secondary-foreground: 25 85% 45%;
+    --muted: 29 30% 92%;
+    --muted-foreground: 20 14% 45%;
+    --accent: 29 45% 90%;
+    --accent-foreground: 25 85% 45%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --border: 29 25% 85%;
+    --input: 29 25% 85%;
+    --ring: 25 85% 60%;
+    --chart-1: 25 85% 60%;
+    --chart-2: 33 77% 65%;
+    --chart-3: 45 69% 70%;
+    --chart-4: 15 95% 65%;
+    --chart-5: 35 91% 68%;
+    --radius: 1rem;
+    --sidebar-background: 29 46% 98%;
+    --sidebar-foreground: 20 14% 30%;
+    --sidebar-primary: 25 85% 60%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 29 45% 95%;
+    --sidebar-accent-foreground: 25 85% 45%;
+    --sidebar-border: 29 25% 88%;
+    --sidebar-ring: 25 85% 60%;
   }
+  
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Dark Claymorphism 方案 */
+    --background: 20 14% 8%;
+    --foreground: 29 46% 95%;
+    --card: 20 14% 10%;
+    --card-foreground: 29 46% 95%;
+    --popover: 20 14% 10%;
+    --popover-foreground: 29 46% 95%;
+    --primary: 25 85% 55%;
+    --primary-foreground: 20 14% 8%;
+    --secondary: 20 14% 15%;
+    --secondary-foreground: 29 46% 95%;
+    --muted: 20 14% 15%;
+    --muted-foreground: 29 20% 65%;
+    --accent: 20 14% 15%;
+    --accent-foreground: 29 46% 95%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 29 46% 95%;
+    --border: 20 14% 20%;
+    --input: 20 14% 20%;
+    --ring: 25 85% 55%;
+    --chart-1: 25 85% 55%;
+    --chart-2: 33 77% 60%;
+    --chart-3: 45 69% 65%;
+    --chart-4: 15 95% 60%;
+    --chart-5: 35 91% 63%;
+    --sidebar-background: 20 14% 10%;
+    --sidebar-foreground: 29 46% 90%;
+    --sidebar-primary: 25 85% 55%;
+    --sidebar-primary-foreground: 20 14% 8%;
+    --sidebar-accent: 20 14% 15%;
+    --sidebar-accent-foreground: 29 46% 90%;
+    --sidebar-border: 20 14% 20%;
+    --sidebar-ring: 25 85% 55%;
   }
 }
 
@@ -101,7 +253,175 @@ body {
   * {
     @apply border-border;
   }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply clay-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  
+  /* 覆寫默認的卡片樣式 */
+  .bg-card {
+    @apply clay-card;
+  }
+  
+  /* 覆寫默認的按鈕樣式 */
+  button[data-clay="true"] {
+    @apply clay-button;
+  }
+  
+  /* 確保對話框正確顯示 */
+  [data-radix-popper-content-wrapper] {
+    z-index: 50 !important;
+  }
+  
+  [data-state="open"][data-side] {
+    z-index: 50 !important;
+  }
+  
+  /* Dialog 覆蓋樣式 - 更具體的選擇器 */
+  [data-state="open"][role="dialog"] {
+    z-index: 50 !important;
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+  }
+  
+  /* Dialog Overlay */
+  [data-state="open"] + [data-state="open"] {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 40 !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+  
+  /* 確保對話框內容正確居中 */
+  [data-radix-dialog-content] {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 50 !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+  }
+  
+  /* 覆蓋 shadcn/ui Dialog 樣式 */
+  .clay-dialog-content[data-state="open"] {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 50 !important;
+    max-width: 32rem !important;
+    width: 90vw !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 
+      0 20px 60px rgba(255, 156, 85, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      inset 0 -1px 0 rgba(255, 156, 85, 0.1) !important;
+    backdrop-filter: blur(15px) !important;
+    border-radius: 24px !important;
+    padding: 1.5rem !important;
+  }
+  
+  /* 對話框覆蓋層 */
+  [data-radix-dialog-overlay] {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 40 !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+  
+  /* 美化滾動條 */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.3));
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(145deg, #ff9c55, #ff8a42);
+    border-radius: 4px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(145deg, #ff8a42, #ff7830);
+  }
+}
+
+/* 動畫效果 */
+@keyframes clay-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes clay-glow {
+  0%, 100% {
+    box-shadow: 
+      0 8px 32px rgba(255, 156, 85, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(255, 156, 85, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 12px 40px rgba(255, 156, 85, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -1px 0 rgba(255, 156, 85, 0.2);
+  }
+}
+
+@keyframes clay-dialog-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translate(-50%, -50%);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translate(-50%, -50%);
+  }
+}
+
+.clay-animate-float {
+  animation: clay-float 3s ease-in-out infinite;
+}
+
+.clay-animate-glow {
+  animation: clay-glow 2s ease-in-out infinite;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+  .clay-card {
+    border-radius: 20px;
+    box-shadow: 
+      0 6px 24px rgba(255, 156, 85, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(255, 156, 85, 0.08);
+  }
+  
+  .clay-button {
+    border-radius: 14px;
+  }
+  
+  .clay-dialog-content {
+    max-width: 95vw;
+    margin: 1rem;
   }
 }

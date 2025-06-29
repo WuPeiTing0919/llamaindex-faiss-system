@@ -24,7 +24,8 @@ from database import (
     create_user, authenticate_user, get_user_by_username, get_user_by_email,
     create_access_token, verify_token, create_document, get_user_documents, delete_document,
     create_builtin_models, get_available_models, create_custom_model, delete_custom_model,
-    set_user_model_preference, get_user_model_preferences, get_user_default_model, delete_user_model_preference
+    set_user_model_preference, get_user_model_preferences, get_user_default_model, 
+    delete_user_model_preference, delete_user_model_preference_by_id
 )
 from user_knowledge_base import UserKnowledgeBaseSystem
 
@@ -125,11 +126,10 @@ class CreateCustomModel(BaseModel):
 class UserModelPreferenceInfo(BaseModel):
     id: int
     model_id: int
-    model_name: str
-    provider: str
     api_key_set: bool
     is_default: bool
     created_at: datetime
+    model: AIModelInfo  # 包含完整的模型信息
 
 class SetModelPreference(BaseModel):
     model_id: int
@@ -252,8 +252,19 @@ async def upload_document(
 ):
     """上傳文檔 (需要認證)"""
     try:
-        # 讀取文件內容
+        # 檢查文件大小限制 (500MB)
+        max_size = 500 * 1024 * 1024  # 500MB
+        file_size = 0
+        
+        # 讀取文件內容並檢查大小
         file_content = await file.read()
+        file_size = len(file_content)
+        
+        if file_size > max_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"文件大小 {file_size / (1024*1024):.2f}MB 超過 500MB 限制"
+            )
         
         # 保存文件到用戶專屬目錄
         file_path = user_kb_system.save_user_document(
@@ -268,7 +279,7 @@ async def upload_document(
             filename=Path(file_path).name,
             original_filename=file.filename,
             file_path=file_path,
-            file_size=len(file_content),
+            file_size=file_size,
             content_type=file.content_type or "application/octet-stream",
             owner_id=current_user.id
         )
@@ -280,7 +291,7 @@ async def upload_document(
             "message": f"文檔 {file.filename} 上傳成功",
             "document_id": db_document.id,
             "filename": file.filename,
-            "size": len(file_content)
+            "size": file_size
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"上傳失敗: {str(e)}")
@@ -394,6 +405,13 @@ async def get_user_status(
             "api_key_set": bool(default_model_pref.api_key)
         }
     
+    # 為前端兼容性，創建 user_ai_model 格式
+    user_ai_model = {
+        "name": current_model["name"],
+        "provider": current_model["provider"],
+        "has_api_key": current_model["api_key_set"]
+    }
+    
     return {
         "status": "running",
         "user_id": current_user.id,
@@ -403,7 +421,8 @@ async def get_user_status(
         "model_status": "ready",
         "memory_usage": "1.2GB",
         "cpu_usage": "25%",
-        "current_model": current_model,
+        "current_model": current_model,  # 新格式
+        "user_ai_model": user_ai_model,  # 兼容舊格式
         "embedding_model": {
             "name": "BAAI/bge-base-zh", 
             "provider": "huggingface",
@@ -503,18 +522,37 @@ async def get_user_model_preferences_endpoint(
     """獲取用戶的模型偏好設定"""
     preferences = get_user_model_preferences(db, current_user.id)
     
-    return [
-        UserModelPreferenceInfo(
+    result = []
+    for pref in preferences:
+        # 獲取模型的創建者用戶名
+        created_by_username = None
+        if pref.model.created_by_user_id:
+            if pref.model.created_by:
+                created_by_username = pref.model.created_by.username
+        
+        model_info = AIModelInfo(
+            id=pref.model.id,
+            name=pref.model.name,
+            provider=pref.model.provider,
+            model_id=pref.model.model_id,
+            api_base_url=pref.model.api_base_url,
+            description=pref.model.description,
+            is_built_in=pref.model.is_built_in,
+            is_active=pref.model.is_active,
+            created_at=pref.model.created_at,
+            created_by_username=created_by_username
+        )
+        
+        result.append(UserModelPreferenceInfo(
             id=pref.id,
             model_id=pref.model_id,
-            model_name=pref.model.name,
-            provider=pref.model.provider,
             api_key_set=bool(pref.api_key),
             is_default=pref.is_default,
-            created_at=pref.created_at
-        )
-        for pref in preferences
-    ]
+            created_at=pref.created_at,
+            model=model_info
+        ))
+    
+    return result
 
 @app.post("/user/model-preferences", response_model=UserModelPreferenceInfo)
 async def set_user_model_preference_endpoint(
@@ -541,26 +579,44 @@ async def set_user_model_preference_endpoint(
             is_default=preference_data.is_default
         )
         
+        # 獲取模型的創建者用戶名
+        created_by_username = None
+        if model.created_by_user_id:
+            if model.created_by:
+                created_by_username = model.created_by.username
+        
+        model_info = AIModelInfo(
+            id=model.id,
+            name=model.name,
+            provider=model.provider,
+            model_id=model.model_id,
+            api_base_url=model.api_base_url,
+            description=model.description,
+            is_built_in=model.is_built_in,
+            is_active=model.is_active,
+            created_at=model.created_at,
+            created_by_username=created_by_username
+        )
+        
         return UserModelPreferenceInfo(
             id=pref.id,
             model_id=pref.model_id,
-            model_name=model.name,
-            provider=model.provider,
             api_key_set=bool(pref.api_key),
             is_default=pref.is_default,
-            created_at=pref.created_at
+            created_at=pref.created_at,
+            model=model_info
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"設定偏好失敗: {str(e)}")
 
-@app.delete("/user/model-preferences/{model_id}")
+@app.delete("/user/model-preferences/{preference_id}")
 async def delete_user_model_preference_endpoint(
-    model_id: int,
+    preference_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """刪除用戶的模型偏好設定"""
-    success = delete_user_model_preference(db, current_user.id, model_id)
+    success = delete_user_model_preference_by_id(db, current_user.id, preference_id)
     
     if not success:
         raise HTTPException(status_code=404, detail="偏好設定不存在")
@@ -587,4 +643,13 @@ async def get_user_default_model_endpoint(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    # 配置支持大文件上傳 (500MB)
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8000,
+        timeout_keep_alive=300,  # 保持連接5分鐘
+        timeout_graceful_shutdown=300,  # 優雅關閉超時
+        limit_max_requests=1000,
+        limit_concurrency=100
+    ) 

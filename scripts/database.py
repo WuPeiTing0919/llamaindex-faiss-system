@@ -359,10 +359,23 @@ def get_user_default_model(db: Session, user_id: int) -> Optional[UserAIModelPre
     ).join(AIModel).filter(AIModel.is_active == True).first()
 
 def delete_user_model_preference(db: Session, user_id: int, model_id: int) -> bool:
-    """刪除用戶的模型偏好設定"""
+    """刪除用戶的模型偏好設定（根據模型ID）"""
     pref = db.query(UserAIModelPreference).filter(
         UserAIModelPreference.user_id == user_id,
         UserAIModelPreference.model_id == model_id
+    ).first()
+    
+    if pref:
+        db.delete(pref)
+        db.commit()
+        return True
+    return False
+
+def delete_user_model_preference_by_id(db: Session, user_id: int, preference_id: int) -> bool:
+    """刪除用戶的模型偏好設定（根據偏好ID）"""
+    pref = db.query(UserAIModelPreference).filter(
+        UserAIModelPreference.id == preference_id,
+        UserAIModelPreference.user_id == user_id
     ).first()
     
     if pref:
