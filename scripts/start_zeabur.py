@@ -36,15 +36,38 @@ if not os.getenv('DEEPSEEK_API_KEY'):
 if not os.getenv('FRONTEND_URL'):
     print("⚠️  警告: FRONTEND_URL 環境變數未設置")
 
+# 確保工作目錄正確
+os.chdir(current_dir)
+print(f"📍 當前工作目錄: {os.getcwd()}")
+
+# 檢查必要文件
+auth_server_path = current_dir / 'auth_api_server.py'
+if not auth_server_path.exists():
+    print(f"❌ auth_api_server.py 文件不存在: {auth_server_path}")
+    sys.exit(1)
+
+print(f"✓ 找到 auth_api_server.py: {auth_server_path}")
+
+# 確保舊的 api_server.py 不存在
+old_server_path = current_dir / 'api_server.py'
+if old_server_path.exists():
+    print(f"⚠️ 檢測到舊的 api_server.py 文件，請將其重命名或刪除")
+
 # 啟動應用
-print("🚀 啟動 FastAPI 應用...")
+print("🚀 啟動 FastAPI 應用 (支持用戶認證版本)...")
 
 try:
+    # 明確導入認證版 API 服務器
     from auth_api_server import app
     import uvicorn
     
+    # 驗證導入的應用版本
+    print(f"✓ 成功導入應用: {app.title}")
+    print(f"✓ 應用版本: {app.version}")
+    
     # 獲取端口
     port = int(os.getenv('PORT', 8000))
+    print(f"✓ 監聽端口: {port}")
     
     # 配置 uvicorn 
     uvicorn.run(
@@ -59,6 +82,12 @@ try:
         log_level="info"
     )
     
+except ImportError as e:
+    print(f"❌ 導入 auth_api_server 失敗: {e}")
+    print("檢查文件是否存在以及依賴是否安裝")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
 except Exception as e:
     print(f"❌ 啟動失敗: {e}")
     import traceback

@@ -6,7 +6,7 @@
     type = "python"
     pythonVersion = "3.11"
     buildCommand = "pip install -r scripts/requirements-zeabur.txt"
-    startCommand = "python scripts/start_zeabur.py"
+    startCommand = "python scripts/main.py"
     port = 8000
     [services.api.env]
       DEEPSEEK_API_KEY = "$DEEPSEEK_API_KEY"
@@ -16,6 +16,7 @@
       ALLOW_ALL_ORIGINS = "true"
       PYTHONPATH = "/app"
       PYTHONUNBUFFERED = "1"
+      USE_AUTH_SERVER = "true"
 
 # 路由配置 - 所有請求都路由到 API 服務
 [[routes]]
