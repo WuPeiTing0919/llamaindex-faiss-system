@@ -20,9 +20,11 @@ from sqlalchemy.orm import Session
 
 # 導入自定義模塊
 from database import (
-    create_tables, get_db, User, Document,
+    create_tables, get_db, User, Document, AIModel, UserAIModelPreference,
     create_user, authenticate_user, get_user_by_username, get_user_by_email,
-    create_access_token, verify_token, create_document, get_user_documents, delete_document
+    create_access_token, verify_token, create_document, get_user_documents, delete_document,
+    create_builtin_models, get_available_models, create_custom_model, delete_custom_model,
+    set_user_model_preference, get_user_model_preferences, get_user_default_model, delete_user_model_preference
 )
 from user_knowledge_base import UserKnowledgeBaseSystem
 
@@ -31,6 +33,16 @@ load_dotenv()
 
 # 創建數據庫表
 create_tables()
+
+# 初始化內建模型
+from sqlalchemy.orm import sessionmaker
+from database import engine
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+db = SessionLocal()
+try:
+    create_builtin_models(db)
+finally:
+    db.close()
 
 app = FastAPI(title="企業知識庫 API (支持用戶認證)", version="2.0.0")
 
@@ -89,6 +101,40 @@ class DocumentInfo(BaseModel):
     original_filename: str
     file_size: int
     upload_time: datetime
+
+# AI模型相關模型
+class AIModelInfo(BaseModel):
+    id: int
+    name: str
+    provider: str
+    model_id: str
+    api_base_url: Optional[str]
+    description: Optional[str]
+    is_built_in: bool
+    is_active: bool
+    created_at: datetime
+    created_by_username: Optional[str] = None
+
+class CreateCustomModel(BaseModel):
+    name: str
+    provider: str
+    model_id: str
+    api_base_url: str
+    description: Optional[str] = ""
+
+class UserModelPreferenceInfo(BaseModel):
+    id: int
+    model_id: int
+    model_name: str
+    provider: str
+    api_key_set: bool
+    is_default: bool
+    created_at: datetime
+
+class SetModelPreference(BaseModel):
+    model_id: int
+    api_key: Optional[str] = None
+    is_default: bool = False
 
 # 依賴函數
 async def get_current_user(
@@ -242,7 +288,8 @@ async def upload_document(
 @app.post("/query")
 async def query_knowledge_base(
     request: QueryRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """查詢個人知識庫 (需要認證)"""
     try:
@@ -270,7 +317,8 @@ async def query_knowledge_base(
         answer = user_kb_system.query_user_with_llm(
             user_id=current_user.id,
             query=request.query,
-            context_docs=context_docs
+            context_docs=context_docs,
+            db_session=db
         )
         
         processing_time = time.time() - start_time
@@ -329,6 +377,23 @@ async def get_user_status(
     # 從數據庫獲取用戶的真實文檔數量
     user_documents = get_user_documents(db, current_user.id)
     
+    # 獲取用戶的默認模型
+    default_model_pref = get_user_default_model(db, current_user.id)
+    current_model = {
+        "name": "DeepSeek Chat",
+        "provider": "deepseek",
+        "model_id": "deepseek-chat",
+        "api_key_set": bool(os.getenv("DEEPSEEK_API_KEY"))
+    }
+    
+    if default_model_pref and default_model_pref.model:
+        current_model = {
+            "name": default_model_pref.model.name,
+            "provider": default_model_pref.model.provider,
+            "model_id": default_model_pref.model.model_id,
+            "api_key_set": bool(default_model_pref.api_key)
+        }
+    
     return {
         "status": "running",
         "user_id": current_user.id,
@@ -337,13 +402,188 @@ async def get_user_status(
         "index_size": len(user_documents),  # 簡化為文檔數量
         "model_status": "ready",
         "memory_usage": "1.2GB",
-        "cpu_usage": "25%"
+        "cpu_usage": "25%",
+        "current_model": current_model,
+        "embedding_model": {
+            "name": "BAAI/bge-base-zh", 
+            "provider": "huggingface",
+            "description": "向量化文檔"
+        }
     }
 
 @app.get("/health")
 async def health_check():
     """健康檢查 (無需認證)"""
     return {"status": "healthy", "timestamp": datetime.utcnow()}
+
+# AI模型管理端點
+@app.get("/ai-models", response_model=List[AIModelInfo])
+async def list_available_models(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """列出所有可用的AI模型"""
+    models = get_available_models(db)
+    
+    result = []
+    for model in models:
+        created_by_username = None
+        if model.created_by_user_id:
+            # 直接通過關聯關係獲取用戶名
+            if model.created_by:
+                created_by_username = model.created_by.username
+        
+        result.append(AIModelInfo(
+            id=model.id,
+            name=model.name,
+            provider=model.provider,
+            model_id=model.model_id,
+            api_base_url=model.api_base_url,
+            description=model.description,
+            is_built_in=model.is_built_in,
+            is_active=model.is_active,
+            created_at=model.created_at,
+            created_by_username=created_by_username
+        ))
+    
+    return result
+
+@app.post("/ai-models/custom", response_model=AIModelInfo)
+async def create_custom_ai_model(
+    model_data: CreateCustomModel,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """創建自定義AI模型"""
+    try:
+        db_model = create_custom_model(
+            db=db,
+            name=model_data.name,
+            provider=model_data.provider,
+            model_id=model_data.model_id,
+            api_base_url=model_data.api_base_url,
+            description=model_data.description,
+            user_id=current_user.id
+        )
+        
+        return AIModelInfo(
+            id=db_model.id,
+            name=db_model.name,
+            provider=db_model.provider,
+            model_id=db_model.model_id,
+            api_base_url=db_model.api_base_url,
+            description=db_model.description,
+            is_built_in=db_model.is_built_in,
+            is_active=db_model.is_active,
+            created_at=db_model.created_at,
+            created_by_username=current_user.username
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"創建模型失敗: {str(e)}")
+
+@app.delete("/ai-models/custom/{model_id}")
+async def delete_custom_ai_model(
+    model_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """刪除自定義AI模型（只能刪除自己創建的）"""
+    success = delete_custom_model(db, model_id, current_user.id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="模型不存在或無權限刪除")
+    
+    return {"message": "模型刪除成功"}
+
+@app.get("/user/model-preferences", response_model=List[UserModelPreferenceInfo])
+async def get_user_model_preferences_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """獲取用戶的模型偏好設定"""
+    preferences = get_user_model_preferences(db, current_user.id)
+    
+    return [
+        UserModelPreferenceInfo(
+            id=pref.id,
+            model_id=pref.model_id,
+            model_name=pref.model.name,
+            provider=pref.model.provider,
+            api_key_set=bool(pref.api_key),
+            is_default=pref.is_default,
+            created_at=pref.created_at
+        )
+        for pref in preferences
+    ]
+
+@app.post("/user/model-preferences", response_model=UserModelPreferenceInfo)
+async def set_user_model_preference_endpoint(
+    preference_data: SetModelPreference,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """設定用戶的模型偏好"""
+    try:
+        # 檢查模型是否存在
+        model = db.query(AIModel).filter(
+            AIModel.id == preference_data.model_id,
+            AIModel.is_active == True
+        ).first()
+        
+        if not model:
+            raise HTTPException(status_code=404, detail="模型不存在")
+        
+        pref = set_user_model_preference(
+            db=db,
+            user_id=current_user.id,
+            model_id=preference_data.model_id,
+            api_key=preference_data.api_key,
+            is_default=preference_data.is_default
+        )
+        
+        return UserModelPreferenceInfo(
+            id=pref.id,
+            model_id=pref.model_id,
+            model_name=model.name,
+            provider=model.provider,
+            api_key_set=bool(pref.api_key),
+            is_default=pref.is_default,
+            created_at=pref.created_at
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"設定偏好失敗: {str(e)}")
+
+@app.delete("/user/model-preferences/{model_id}")
+async def delete_user_model_preference_endpoint(
+    model_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """刪除用戶的模型偏好設定"""
+    success = delete_user_model_preference(db, current_user.id, model_id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="偏好設定不存在")
+    
+    return {"message": "偏好設定刪除成功"}
+
+@app.get("/user/default-model")
+async def get_user_default_model_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """獲取用戶的默認模型"""
+    default_pref = get_user_default_model(db, current_user.id)
+    
+    if not default_pref:
+        return {"message": "尚未設定默認模型"}
+    
+    return {
+        "model_id": default_pref.model_id,
+        "model_name": default_pref.model.name,
+        "provider": default_pref.model.provider,
+        "api_key_set": bool(default_pref.api_key)
+    }
 
 if __name__ == "__main__":
     import uvicorn

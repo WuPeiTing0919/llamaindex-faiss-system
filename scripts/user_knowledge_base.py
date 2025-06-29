@@ -249,8 +249,8 @@ class UserKnowledgeBaseSystem:
         
         return results
     
-    def query_user_with_llm(self, user_id: int, query: str, context_docs: List[str]) -> str:
-        """為特定用戶結合檢索結果調用 LLM"""
+    def query_user_with_llm(self, user_id: int, query: str, context_docs: List[str], db_session=None) -> str:
+        """為特定用戶結合檢索結果調用 LLM，使用用戶選擇的模型"""
         # 構建提示詞
         context = "\n\n".join([f"文檔{i+1}: {doc}" for i, doc in enumerate(context_docs)])
         
@@ -262,41 +262,178 @@ class UserKnowledgeBaseSystem:
 
 請基於上述您上傳的文檔內容提供準確、詳細的回答："""
         
-        # 調用 DeepSeek API
-        import requests
+        # 獲取用戶的預設模型
+        model_config = self._get_user_preferred_model(user_id, db_session)
         
+        if not model_config:
+            logger.warning(f"用戶 {user_id} 未設置預設模型，使用默認 DeepSeek")
+            model_config = {
+                'provider': 'deepseek',
+                'model_id': 'deepseek-chat',
+                'api_base_url': 'https://api.deepseek.com',
+                'api_key': os.getenv("DEEPSEEK_API_KEY")
+            }
+        
+        # 根據提供商調用不同的 API
         try:
-            api_key = os.getenv("DEEPSEEK_API_KEY")
-            if not api_key:
-                logger.error("未設置 DEEPSEEK_API_KEY 環境變數")
-                return "錯誤：未設置 DeepSeek API 密鑰"
-                
-            response = requests.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key}"
-                },
-                json={
-                    "model": os.getenv("MODEL_NAME", "deepseek-chat"),
-                    "messages": [
-                        {"role": "system", "content": f"你是用戶 {user_id} 的私人知識庫助手，只能基於該用戶上傳的文檔回答問題。"},
-                        {"role": "user", "content": prompt}
-                    ],
-                    "temperature": 0.7
-                },
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                return response.json()["choices"][0]["message"]["content"]
+            if model_config['provider'] == 'deepseek':
+                return self._call_deepseek_api(user_id, prompt, model_config)
+            elif model_config['provider'] == 'openai':
+                return self._call_openai_api(user_id, prompt, model_config)
+            elif model_config['provider'] == 'anthropic':
+                return self._call_anthropic_api(user_id, prompt, model_config)
             else:
-                logger.error(f"API 調用失敗: {response.status_code} {response.text}")
-                return f"API 調用失敗: {response.text}"
+                # Google, Microsoft 等其他提供商使用 OpenAI 兼容格式
+                return self._call_openai_compatible_api(user_id, prompt, model_config)
                 
         except Exception as e:
             logger.error(f"LLM 調用錯誤: {e}")
             return f"基於您的文檔，無法生成回答。錯誤: {str(e)}"
+    
+    def _get_user_preferred_model(self, user_id: int, db_session) -> Optional[Dict]:
+        """獲取用戶的預設模型配置"""
+        if not db_session:
+            return None
+            
+        try:
+            from database import get_user_default_model, AIModel
+            default_pref = get_user_default_model(db_session, user_id)
+            
+            if default_pref and default_pref.model:
+                return {
+                    'provider': default_pref.model.provider,
+                    'model_id': default_pref.model.model_id,
+                    'api_base_url': default_pref.model.api_base_url,
+                    'api_key': default_pref.api_key
+                }
+        except Exception as e:
+            logger.error(f"獲取用戶 {user_id} 預設模型失敗: {e}")
+        
+        return None
+    
+    def _call_deepseek_api(self, user_id: int, prompt: str, model_config: Dict) -> str:
+        """調用 DeepSeek API"""
+        import requests
+        
+        api_key = model_config.get('api_key') or os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            return "錯誤：未設置 DeepSeek API 密鑰"
+            
+        response = requests.post(
+            f"{model_config['api_base_url']}/v1/chat/completions",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            },
+            json={
+                "model": model_config['model_id'],
+                "messages": [
+                    {"role": "system", "content": f"你是用戶 {user_id} 的私人知識庫助手，只能基於該用戶上傳的文檔回答問題。"},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.7
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return response.json()["choices"][0]["message"]["content"]
+        else:
+            logger.error(f"DeepSeek API 調用失敗: {response.status_code} {response.text}")
+            return f"API 調用失敗: {response.text}"
+    
+    def _call_openai_api(self, user_id: int, prompt: str, model_config: Dict) -> str:
+        """調用 OpenAI API"""
+        import requests
+        
+        api_key = model_config.get('api_key')
+        if not api_key:
+            return "錯誤：未設置 OpenAI API 密鑰"
+            
+        response = requests.post(
+            f"{model_config['api_base_url']}/chat/completions",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            },
+            json={
+                "model": model_config['model_id'],
+                "messages": [
+                    {"role": "system", "content": f"你是用戶 {user_id} 的私人知識庫助手，只能基於該用戶上傳的文檔回答問題。"},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.7
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return response.json()["choices"][0]["message"]["content"]
+        else:
+            logger.error(f"OpenAI API 調用失敗: {response.status_code} {response.text}")
+            return f"API 調用失敗: {response.text}"
+    
+    def _call_anthropic_api(self, user_id: int, prompt: str, model_config: Dict) -> str:
+        """調用 Anthropic Claude API"""
+        import requests
+        
+        api_key = model_config.get('api_key')
+        if not api_key:
+            return "錯誤：未設置 Anthropic API 密鑰"
+            
+        response = requests.post(
+            f"{model_config['api_base_url']}/v1/messages",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+                "anthropic-version": "2023-06-01"
+            },
+            json={
+                "model": model_config['model_id'],
+                "max_tokens": 1000,
+                "messages": [
+                    {"role": "user", "content": f"你是用戶 {user_id} 的私人知識庫助手，只能基於該用戶上傳的文檔回答問題。\n\n{prompt}"}
+                ]
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return response.json()["content"][0]["text"]
+        else:
+            logger.error(f"Anthropic API 調用失敗: {response.status_code} {response.text}")
+            return f"API 調用失敗: {response.text}"
+    
+    def _call_openai_compatible_api(self, user_id: int, prompt: str, model_config: Dict) -> str:
+        """調用 OpenAI 兼容的 API（如 Google, Microsoft 等）"""
+        import requests
+        
+        api_key = model_config.get('api_key')
+        if not api_key:
+            return f"錯誤：未設置 {model_config['provider']} API 密鑰"
+            
+        response = requests.post(
+            f"{model_config['api_base_url']}/chat/completions",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            },
+            json={
+                "model": model_config['model_id'],
+                "messages": [
+                    {"role": "system", "content": f"你是用戶 {user_id} 的私人知識庫助手，只能基於該用戶上傳的文檔回答問題。"},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.7
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return response.json()["choices"][0]["message"]["content"]
+        else:
+            logger.error(f"{model_config['provider']} API 調用失敗: {response.status_code} {response.text}")
+            return f"API 調用失敗: {response.text}"
     
     def delete_user_document(self, user_id: int, filename: str) -> bool:
         """刪除用戶文檔"""

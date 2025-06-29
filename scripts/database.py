@@ -73,6 +73,41 @@ class UserSession(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
+class AIModel(Base):
+    """AI模型配置"""
+    __tablename__ = "ai_models"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    provider = Column(String(50), nullable=False)  # deepseek, openai, claude, etc.
+    model_id = Column(String(100), nullable=False)  # 實際的模型ID
+    api_base_url = Column(String(200))  # API 基礎URL
+    api_key_required = Column(Boolean, default=True)  # 是否需要API key
+    description = Column(Text)  # 模型描述
+    is_built_in = Column(Boolean, default=False)  # 是否為內建模型
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by_user_id = Column(Integer, ForeignKey("users.id"))  # 創建者，內建模型為空
+    
+    # 關聯關係
+    created_by = relationship("User", foreign_keys=[created_by_user_id])
+
+class UserAIModelPreference(Base):
+    """用戶AI模型偏好設定"""
+    __tablename__ = "user_ai_model_preferences"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    model_id = Column(Integer, ForeignKey("ai_models.id"), nullable=False)
+    api_key = Column(String(500))  # 用戶的API key（加密存儲）
+    is_default = Column(Boolean, default=False)  # 是否為默認模型
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # 關聯關係
+    user = relationship("User")
+    model = relationship("AIModel")
+
 # 創建所有表
 def create_tables():
     Base.metadata.create_all(bind=engine)
@@ -181,4 +216,157 @@ def delete_document(db: Session, document_id: int, user_id: int) -> bool:
         db.delete(document)
         db.commit()
         return True
-    return False 
+    return False
+
+# AI模型相關函數
+def create_builtin_models(db: Session):
+    """創建內建模型"""
+    builtin_models = [
+        {
+            "name": "DeepSeek Chat",
+            "provider": "deepseek",
+            "model_id": "deepseek-chat",
+            "api_base_url": "https://api.deepseek.com",
+            "description": "DeepSeek 聊天模型，適合對話和推理任務",
+            "is_built_in": True
+        },
+        {
+            "name": "OpenAI GPT-4",
+            "provider": "openai",
+            "model_id": "gpt-4",
+            "api_base_url": "https://api.openai.com/v1",
+            "description": "OpenAI GPT-4 模型，功能強大的語言模型",
+            "is_built_in": True
+        },
+        {
+            "name": "OpenAI GPT-3.5 Turbo",
+            "provider": "openai",
+            "model_id": "gpt-3.5-turbo",
+            "api_base_url": "https://api.openai.com/v1",
+            "description": "OpenAI GPT-3.5 Turbo，快速且成本效益高",
+            "is_built_in": True
+        },
+        {
+            "name": "Claude 3 Sonnet",
+            "provider": "anthropic",
+            "model_id": "claude-3-sonnet-20240229",
+            "api_base_url": "https://api.anthropic.com",
+            "description": "Anthropic Claude 3 Sonnet，平衡性能和速度",
+            "is_built_in": True
+        }
+    ]
+    
+    for model_data in builtin_models:
+        existing_model = db.query(AIModel).filter(
+            AIModel.model_id == model_data["model_id"],
+            AIModel.is_built_in == True
+        ).first()
+        
+        if not existing_model:
+            db_model = AIModel(**model_data)
+            db.add(db_model)
+    
+    db.commit()
+
+def get_available_models(db: Session) -> List[AIModel]:
+    """獲取所有可用的AI模型"""
+    return db.query(AIModel).filter(AIModel.is_active == True).all()
+
+def create_custom_model(db: Session, name: str, provider: str, model_id: str, 
+                       api_base_url: str, description: str, user_id: int) -> AIModel:
+    """創建自定義模型"""
+    db_model = AIModel(
+        name=name,
+        provider=provider,
+        model_id=model_id,
+        api_base_url=api_base_url,
+        description=description,
+        is_built_in=False,
+        created_by_user_id=user_id
+    )
+    db.add(db_model)
+    db.commit()
+    db.refresh(db_model)
+    return db_model
+
+def delete_custom_model(db: Session, model_id: int, user_id: int) -> bool:
+    """刪除自定義模型（只能刪除自己創建的）"""
+    model = db.query(AIModel).filter(
+        AIModel.id == model_id,
+        AIModel.created_by_user_id == user_id,
+        AIModel.is_built_in == False
+    ).first()
+    
+    if model:
+        # 先刪除相關的用戶偏好設定
+        db.query(UserAIModelPreference).filter(
+            UserAIModelPreference.model_id == model_id
+        ).delete()
+        
+        db.delete(model)
+        db.commit()
+        return True
+    return False
+
+def set_user_model_preference(db: Session, user_id: int, model_id: int, 
+                             api_key: str = None, is_default: bool = False) -> UserAIModelPreference:
+    """設定用戶的模型偏好"""
+    # 如果設為默認，先清除其他默認設定
+    if is_default:
+        db.query(UserAIModelPreference).filter(
+            UserAIModelPreference.user_id == user_id,
+            UserAIModelPreference.is_default == True
+        ).update({"is_default": False})
+    
+    # 檢查是否已存在該模型的偏好設定
+    existing_pref = db.query(UserAIModelPreference).filter(
+        UserAIModelPreference.user_id == user_id,
+        UserAIModelPreference.model_id == model_id
+    ).first()
+    
+    if existing_pref:
+        # 更新現有設定
+        existing_pref.api_key = api_key
+        existing_pref.is_default = is_default
+        existing_pref.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(existing_pref)
+        return existing_pref
+    else:
+        # 創建新設定
+        db_pref = UserAIModelPreference(
+            user_id=user_id,
+            model_id=model_id,
+            api_key=api_key,
+            is_default=is_default
+        )
+        db.add(db_pref)
+        db.commit()
+        db.refresh(db_pref)
+        return db_pref
+
+def get_user_model_preferences(db: Session, user_id: int) -> List[UserAIModelPreference]:
+    """獲取用戶的模型偏好設定"""
+    return db.query(UserAIModelPreference).filter(
+        UserAIModelPreference.user_id == user_id
+    ).join(AIModel).filter(AIModel.is_active == True).all()
+
+def get_user_default_model(db: Session, user_id: int) -> Optional[UserAIModelPreference]:
+    """獲取用戶的默認模型"""
+    return db.query(UserAIModelPreference).filter(
+        UserAIModelPreference.user_id == user_id,
+        UserAIModelPreference.is_default == True
+    ).join(AIModel).filter(AIModel.is_active == True).first()
+
+def delete_user_model_preference(db: Session, user_id: int, model_id: int) -> bool:
+    """刪除用戶的模型偏好設定"""
+    pref = db.query(UserAIModelPreference).filter(
+        UserAIModelPreference.user_id == user_id,
+        UserAIModelPreference.model_id == model_id
+    ).first()
+    
+    if pref:
+        db.delete(pref)
+        db.commit()
+        return True
+    return False
