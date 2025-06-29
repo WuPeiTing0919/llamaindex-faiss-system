@@ -5,12 +5,9 @@
   "framework": "nextjs",
   "outputDirectory": ".next",
   "regions": ["hkg1"],
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@zeabur_api_url"
-  },
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_API_URL": "@zeabur_api_url"
+  "functions": {
+    "app/**": {
+      "maxDuration": 30
     }
   }
 } 

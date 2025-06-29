@@ -4,10 +4,35 @@ import React from "react"
 import { useAuth } from "@/components/auth/auth-context"
 import { AuthPage } from "./auth-page"
 import { KnowledgeBaseDashboard } from "@/components/knowledge-base-dashboard"
+import { ApiConfigError } from "@/components/api-config-error"
 import { Loader2 } from "lucide-react"
+
+// API URL 配置檢查
+const checkApiConfig = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return true
+  }
+  
+  // 在生產環境中檢查
+  if (typeof window !== 'undefined' && 
+      window.location.hostname !== 'localhost' &&
+      window.location.hostname !== '127.0.0.1') {
+    return false
+  }
+  
+  return true // 本地開發環境允許
+}
 
 export default function HomePage() {
   const { user, isLoading } = useAuth()
+
+  // 檢查 API 配置
+  const apiConfigured = checkApiConfig()
+
+  // 如果 API 未配置，顯示配置錯誤頁面
+  if (!apiConfigured) {
+    return <ApiConfigError />
+  }
 
   // 載入中顯示
   if (isLoading) {

@@ -47,12 +47,29 @@ ALLOW_ALL_ORIGINS=true
 3. 選擇 Next.js 框架
 
 ### 步驟 2: 配置環境變數
-在 Vercel 項目設置中添加：
+**重要：** 在 Vercel 項目設置中添加環境變數：
+
+1. 進入 Vercel 項目儀表板
+2. 點擊 "Settings" 選項卡
+3. 選擇 "Environment Variables"
+4. 添加以下變數：
 
 ```
-NEXT_PUBLIC_API_URL=https://your-zeabur-api.zeabur.app
-NODE_ENV=production
+Name: NEXT_PUBLIC_API_URL
+Value: https://your-zeabur-api.zeabur.app
+Environment: Production, Preview, Development
 ```
+
+```
+Name: NODE_ENV
+Value: production
+Environment: Production
+```
+
+**⚠️ 注意事項：**
+- 將 `your-zeabur-api.zeabur.app` 替換為你實際的 Zeabur 後端域名
+- 確保 URL 不包含尾隨斜槓 `/`
+- 環境變數名稱必須完全一致（區分大小寫）
 
 ### 步驟 3: 構建設置
 - Framework Preset: Next.js
@@ -81,19 +98,33 @@ FRONTEND_URL=https://your-vercel-app.vercel.app
 
 ### 常見問題
 
-1. **CORS 錯誤**
+1. **混合內容錯誤 (Mixed Content Error)**
+   ```
+   Mixed Content: The page at 'https://your-app.vercel.app/' was loaded over HTTPS, 
+   but requested an insecure resource 'http://...:8000/...'
+   ```
+   **原因：** `NEXT_PUBLIC_API_URL` 環境變數未正確設置
+   
+   **解決方案：**
+   - 在 Vercel 設置中添加 `NEXT_PUBLIC_API_URL=https://your-zeabur-api.zeabur.app`
+   - 確保使用 HTTPS 協議
+   - 重新部署應用
+   - 清除瀏覽器緩存
+
+2. **CORS 錯誤**
    - 檢查 `FRONTEND_URL` 環境變數
    - 確保 URL 沒有尾隨斜槓
 
-2. **API 連接失敗**
+3. **API 連接失敗**
    - 檢查 `NEXT_PUBLIC_API_URL` 環境變數
    - 確保後端服務正在運行
+   - 測試後端健康檢查：`curl https://your-api.zeabur.app/health`
 
-3. **模型 API 錯誤**
+4. **模型 API 錯誤**
    - 檢查 API 密鑰是否正確
    - 檢查 API 配額是否充足
 
-4. **文件上傳失敗**
+5. **文件上傳失敗**
    - 檢查文件大小是否超過 500MB
    - 檢查後端存儲空間
 

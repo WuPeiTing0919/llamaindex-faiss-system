@@ -16,13 +16,27 @@ import { SystemSettings } from "@/components/system-settings"
 
 // API 基礎 URL 設置
 const getApiBaseUrl = () => {
+  // 優先使用環境變數
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
   }
+  
+  // 生產環境檢查
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    console.error('⚠️ NEXT_PUBLIC_API_URL 環境變數未設置！請在 Vercel 中配置正確的後端 API URL')
+    // 在生產環境中，如果沒有設置環境變數，應該顯示錯誤而不是猜測
+    return ''
+  }
+  
+  // 僅在本地開發環境使用默認值
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname
-    return `http://${hostname}:8000`
+    const protocol = window.location.protocol
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return `${protocol}//${hostname}:8000`
+    }
   }
+  
   return 'http://localhost:8000'
 }
 
